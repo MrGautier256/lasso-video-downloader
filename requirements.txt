@@ -1,0 +1,7 @@
+# Interface : pywebview affiche la page ytdlgui/web/ dans une fenêtre native
+# (WebView2 sous Windows, déjà présent sur Windows 10/11).
+pywebview>=5.0
+# Linux : moteur Qt WebEngine, installable par pip et embarqué par PyInstaller dans la
+# release. Depuis les sources, le moteur GTK des paquets système (python3-gi,
+# gir1.2-webkit2-4.1) convient aussi : pywebview prend celui qu'il trouve.
+pywebview[qt]>=5.0; sys_platform == "linux"
