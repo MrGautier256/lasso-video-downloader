@@ -42,6 +42,7 @@ class Job:
         self.percent = 0.0
         self.speed = ""
         self.eta = ""
+        self.size = ""      # taille annoncée par yt-dlp ("45.20MiB", "~1.2GiB")
         self.item = ""      # "2/10" pour les playlists
         self.proc = None
         self.cancelled = False
@@ -156,6 +157,7 @@ class Engine:
                 pass
             job.speed = m.group("speed") or ""
             job.eta = m.group("eta") or ""
+            job.size = m.group("size") or job.size
             self._post("progress", job.id)
             return
         m = RE_ITEM.search(line)

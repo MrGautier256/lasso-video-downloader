@@ -66,6 +66,15 @@ def get_lang():
     return _current
 
 
+def strings():
+    """Table complète de la langue courante, avec le même repli que T() (anglais puis
+    français) : envoyée telle quelle à l'interface web."""
+    table = dict(_load("fr"))
+    table.update(_load("en"))
+    table.update(_load(_current))
+    return table
+
+
 def T(key):
     table = _load(_current)
     if key in table:
