@@ -18,27 +18,32 @@ A full-featured graphical interface for [yt-dlp](https://github.com/yt-dlp/yt-dl
 
 > **Windows SmartScreen:** on first launch, Windows may show "Windows protected your PC". This just means the exe is new and unsigned, not yet flagged as trustworthy by SmartScreen's reputation system — it's not a malware detection. Click **More info**, then **Run anyway**.
 
-**From source:** requires Python 3 with Tkinter.
-- **Windows:** double-click `main.pyw` (Tkinter is included by default).
-- **Linux:** `python3 main.pyw` (Tkinter comes from the `python3-tk` package on Debian/Ubuntu, `python3-tkinter` on Fedora).
+**From source:** requires Python 3.9+ and the dependencies in `requirements.txt` ([pywebview](https://pywebview.flowrl.com/), which shows the interface in a native window).
+```bash
+pip install -r requirements.txt
+```
+- **Windows:** double-click `main.pyw`. The interface relies on WebView2, already present on Windows 10 and 11.
+- **Linux:** `python3 main.pyw`. pip installs the Qt WebEngine backend; the GTK backend from system packages (`python3-gi` and `gir1.2-webkit2-4.1` on Debian/Ubuntu) works too.
 
-Either way, if yt-dlp and/or ffmpeg are missing on the machine, the app detects it on startup and offers an install window with a per-component progress bar; installation runs in the background without closing the app. Also reachable any time from the Advanced tab ("Download yt-dlp" / "Install ffmpeg" / "Update yt-dlp"). Settings and binaries are stored inside that same folder (`settings.json`, `bin/`), next to the executable, not in a system directory — keep the whole folder together.
+Either way, if yt-dlp and/or ffmpeg are missing on the machine, the app detects it on startup and offers an install window with a per-component progress bar; installation runs in the background without closing the app. Also reachable any time from the Advanced section ("Download yt-dlp" / "Install ffmpeg" / "Update yt-dlp"), or by clicking the yt-dlp / ffmpeg status at the bottom of the menu. Settings and binaries are stored inside that same folder (`settings.json`, `bin/`), next to the executable, not in a system directory — keep the whole folder together.
 
 ## Language and theme
 
-At the top of the window:
-- **Language**: 9 languages available (French, English, Spanish, German, Italian, Portuguese, Dutch, Polish, Russian). "Auto" follows the system language (Windows UI language, or the `LANGUAGE` / `LANG` variables on Linux).
-- **Theme**: light or dark (modern Sun Valley skin, sv-ttk library bundled in `vendor/`). "Auto" follows the system theme: the Windows theme (title bar included), or on Linux the light/dark setting of GNOME and compatible desktops.
+At the bottom of the side menu:
+- **Theme**: the interface follows the Cosmic design system (deep-space background, neon violet accents) in dark mode, with a light variant. "Auto" (screen icon) follows the system theme: the Windows theme (title bar included, in the interface's colors on Windows 11), or on Linux the light/dark setting of GNOME and compatible desktops.
+- **Language**: 9 languages available (French, English, Spanish, German, Italian, Portuguese, Dutch, Polish, Russian), applied without restarting. "Auto" follows the system language (Windows UI language, or the `LANGUAGE` / `LANG` variables on Linux).
 
 ## Quick start
 
-1. Paste one or more links (one per line) in the **Download** tab.
-2. Pick a preset (1080p MP4 video, MP3 audio...) or fine-tune in the other tabs.
-3. Click **Download**. The queue shows progress, speed and time remaining.
+1. Paste one or more links (one per line) in the **Download** section: Paste button, Ctrl+V anywhere on the page, or drag and drop a link from your browser.
+2. Pick a preset in one click (Best, 1080p, 720p, MP3, M4A) or fine-tune in the settings. The summary under the links shows what will be applied (format, subtitles, playlist, simulation...); clicking a tag opens the matching setting.
+3. Click **Download** (or Ctrl+Enter). The queue shows thumbnail (YouTube), progress, speed, time remaining and size.
 
-The **Analyze video** button shows title, duration, thumbnail and the full list of available formats; you can manually pick a specific video format + audio format from there.
+In the queue: click to select (Ctrl/Shift + click for several), right-click to retry, cancel, copy the link or reorder, Delete to remove the selection, double-click to open the folder.
 
-## The tabs
+The **Analyze video** button shows title, duration, thumbnail and the full list of available formats (filterable video / audio); you can manually pick a specific video format + audio format from there.
+
+## The sections
 
 - **Download**: links, destination, presets, download queue.
 - **Format and quality**: video/audio-only, max resolution, container (mp4/mkv/webm), codec, audio format (mp3, m4a, opus, flac...), quality, custom `-f` selector.
@@ -47,15 +52,15 @@ The **Analyze video** button shows title, duration, thumbnail and the full list 
 - **Files and metadata**: filename template (with subfolders), thumbnail, metadata, chapters, description, split by chapters, SponsorBlock (mark or remove embedded ads).
 - **Network and accounts**: rate limit, parallel fragments (speed-up), proxy, IPv4, browser cookies (private or age-restricted videos), credentials.
 - **Advanced**: partial download by time sections, concurrent downloads, binary paths, yt-dlp update, simulate mode, free-form arguments, and a live preview of the generated yt-dlp command (copyable).
-- **Log**: full yt-dlp output, for troubleshooting.
+- **Log**: full yt-dlp output, color-coded (errors, warnings, key steps) and filterable, for troubleshooting.
 
-Every option has an explanatory tooltip on hover.
+Every option is explained right under its name.
 
 ## Notes
 
 - Settings are saved in `settings.json`, next to the executable (the password is never saved).
-- On a YouTube "Sign in to confirm you're not a bot" error: Network and accounts tab, pick your browser under "Use browser cookies".
-- Any yt-dlp option not covered by the interface can be passed via "Extra arguments" (Advanced tab).
+- On a YouTube "Sign in to confirm you're not a bot" error: Network and accounts section, pick your browser under "Use browser cookies".
+- Any yt-dlp option not covered by the interface can be passed via "Extra arguments" (Advanced section).
 
 ## Disclaimer
 
@@ -69,4 +74,4 @@ On first launch, the app downloads for its own operation:
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense / public domain)
 - [ffmpeg](https://github.com/BtbN/FFmpeg-Builds) (GPL build by BtbN)
 
-The Sun Valley visual theme ([sv-ttk](https://github.com/rdbende/Sun-Valley-ttk-theme), MIT license) is bundled in `vendor/`.
+The interface uses [pywebview](https://github.com/r0x0r/pywebview) (BSD license), the [Audiowide](https://fonts.google.com/specimen/Audiowide) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) fonts (SIL Open Font License, bundled in `ytdlgui/web/fonts/`) and [Lucide](https://lucide.dev) icon paths (ISC license). Its style follows the Open Design Cosmic design system.

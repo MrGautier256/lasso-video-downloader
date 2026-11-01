@@ -14,26 +14,25 @@ import sys
 LOCALE_MODULES = ['ytdlgui.locales.' + code for code in
                    ('fr', 'en', 'es', 'de', 'it', 'pt', 'nl', 'pl', 'ru')]
 
-# vendor/sv_ttk est chargé au runtime via un sys.path.insert() (cf. ytdlgui/theme.py),
-# donc jamais analysé statiquement par PyInstaller : ses propres imports stdlib
-# (from __future__ import ..., pathlib) ne sont alors pas embarqués et son chargement
-# échoue silencieusement (theme.py bascule sur le thème de secours, moins abouti :
-# plus de bouton bleu "Accent", coins moins arrondis). On les liste explicitement ici.
-SVTTK_DEPS = ['__future__', 'pathlib', 'functools']
+# L'interface (pywebview) : sa propre collecte (scripts JS, DLL WebView2 sous Windows,
+# backend Qt ou GTK sous Linux) est assurée par les hooks de pyinstaller-hooks-contrib.
+# Tkinter ne sert plus qu'aux messages d'erreur sous Linux (main.pyw) : inutile de
+# l'embarquer sous Windows, où ils passent par MessageBoxW.
+EXCLUDES = ['tkinter', '_tkinter'] if sys.platform == 'win32' else []
 
 a = Analysis(
     ['main.pyw'],
     pathex=[],
     binaries=[],
     datas=[
-        ('assets', 'assets'),   # icône (assets/icon.ico), lue via ytdlgui.binaries.resource_path()
-        ('vendor', 'vendor'),   # sv_ttk vendoré : fichiers .tcl/.png non détectables par l'analyse statique
+        ('assets', 'assets'),             # icônes, lues via ytdlgui.binaries.resource_path()
+        ('ytdlgui/web', 'ytdlgui/web'),   # page de l'interface (HTML, CSS, JS, polices)
     ],
-    hiddenimports=LOCALE_MODULES + SVTTK_DEPS,
+    hiddenimports=LOCALE_MODULES,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=EXCLUDES,
     noarchive=False,
     optimize=0,
 )
@@ -56,7 +55,7 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
     # Icône de l'exécutable : Windows uniquement (PyInstaller l'ignore sous Linux, où
-    # l'icône de fenêtre est posée au runtime depuis assets/icon.png, cf. ytdlgui/app.py).
+    # l'icône de fenêtre est passée à pywebview depuis assets/icon.png, cf. ytdlgui/app.py).
     icon='assets/icon.ico' if sys.platform == 'win32' else None,
 )
 
