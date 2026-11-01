@@ -8,9 +8,6 @@ import traceback
 APP_DIR = (os.path.dirname(os.path.abspath(sys.executable)) if getattr(sys, "frozen", False)
            else os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, APP_DIR)
-_VENDOR = os.path.join(APP_DIR, "vendor")
-if os.path.isdir(_VENDOR):
-    sys.path.insert(1, _VENDOR)
 
 _MUTEX_NAME = "Global\\YTDLInterface_SingleInstance_Mutex"
 _instance_socket = None   # Linux : gardée ouverte tant que l'app tourne
@@ -62,24 +59,36 @@ def _restore_child_env():
         os.environ.pop("LD_LIBRARY_PATH", None)
 
 
+def _message(title, text, error=False):
+    """Boîte de message native, utilisable avant (ou sans) l'interface web."""
+    if os.name == "nt":
+        try:
+            import ctypes
+            flags = 0x10 if error else 0x30   # MB_ICONERROR / MB_ICONWARNING
+            ctypes.windll.user32.MessageBoxW(None, text, title, flags)
+            return
+        except Exception:
+            pass
+    try:
+        import tkinter
+        import tkinter.messagebox
+        root = tkinter.Tk()
+        root.withdraw()
+        (tkinter.messagebox.showerror if error else tkinter.messagebox.showwarning)(title, text)
+        root.destroy()
+    except Exception:
+        print("%s\n%s" % (title, text), file=sys.stderr)
+
+
 def main():
     _restore_child_env()
     if _already_running():
-        try:
-            import tkinter
-            import tkinter.messagebox
-            root = tkinter.Tk()
-            root.withdraw()
-            tkinter.messagebox.showwarning(
-                "YTDL Interface",
-                "YTDL Interface est déjà ouvert.\nYTDL Interface is already running.")
-            root.destroy()
-        except Exception:
-            pass
+        _message("YTDL Interface",
+                 "YTDL Interface est déjà ouvert.\nYTDL Interface is already running.")
         return
     try:
-        from ytdlgui.app import App
-        App().mainloop()
+        from ytdlgui.app import run
+        run()
     except Exception:
         err = traceback.format_exc()
         try:
@@ -87,13 +96,9 @@ def main():
                 f.write(err + "\n")
         except OSError:
             pass
-        try:
-            import tkinter.messagebox
-            tkinter.messagebox.showerror(
-                "YTDL Interface : erreur",
-                "Une erreur inattendue s'est produite (détails dans error.log) :\n\n" + err[-1200:])
-        except Exception:
-            pass
+        _message("YTDL Interface : erreur",
+                 "Une erreur inattendue s'est produite (détails dans error.log) :\n\n" + err[-1200:],
+                 error=True)
         raise
 
 
