@@ -357,11 +357,14 @@ function renderDownload() {
   const ta = h('textarea', {
     class: 'composer__input', spellcheck: 'false', autocomplete: 'off', 'aria-label': T('dl.links'),
     placeholder: 'https://www.youtube.com/watch?v=…\nhttps://www.youtube.com/playlist?list=…',
-    oninput: e => { S.draft = e.target.value; updateLinkCount(); },
+    oninput: e => { S.draft = e.target.value; updateLinks(); },
     onkeydown: e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); addUrls(true); } },
   });
   ta.value = S.draft;
   const count = h('span', { class: 'composer__count' });
+  const links = h('div', { class: 'links', role: 'list', 'aria-label': T('dl.links'), hidden: true });
+  const analyzeBtn = h('button', { class: 'btn btn--sm btn--ghost', type: 'button', title: oneLine(T('dl.analyze.tip')), onclick: analyzeFirst }, icon('scan'), T('dl.analyze'));
+  const cutBtn = h('button', { class: 'btn btn--sm btn--ghost btn--cut', type: 'button', title: oneLine(T('dl.cut.tip')), onclick: cutFromComposer }, icon('scissors'), T('dl.cut'));
 
   const presets = h('div', { class: 'presets', role: 'group', 'aria-label': L('dl.preset') });
   for (const key of S.presetKeys) {
@@ -377,11 +380,11 @@ function renderDownload() {
     h('div', { class: 'composer__field' },
       h('div', { class: 'composer__head' }, h('label', { class: 'eyebrow' }, T('dl.links')), count),
       ta,
+      links,
       h('div', { class: 'composer__tools' },
         h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: pasteLinks }, icon('paste'), T('dl.paste')),
-        h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => { S.draft = ''; ta.value = ''; updateLinkCount(); ta.focus(); } }, icon('x'), T('dl.clear')),
-        h('button', { class: 'btn btn--sm btn--ghost', type: 'button', title: oneLine(T('dl.analyze.tip')), onclick: analyzeFirst }, icon('scan'), T('dl.analyze')),
-        h('button', { class: 'btn btn--sm btn--ghost btn--cut', type: 'button', title: oneLine(T('dl.cut.tip')), onclick: cutFromComposer }, icon('scissors'), T('dl.cut')),
+        h('button', { class: 'btn btn--sm btn--ghost', type: 'button', onclick: () => { S.draft = ''; ta.value = ''; updateLinks(); ta.focus(); } }, icon('x'), T('dl.clear')),
+        analyzeBtn, cutBtn,
         h('span', { class: 'composer__hint' }, h('span', { class: 'kbd' }, 'Ctrl'), '+', h('span', { class: 'kbd' }, '↵'), T('dl.shortcut')))),
     h('div', { class: 'composer__opts' },
       h('span', { class: 'eyebrow' }, L('dl.preset')), presets,
@@ -396,7 +399,7 @@ function renderDownload() {
         h('button', { class: 'btn', type: 'button', title: oneLine(T('dl.addqueue.tip')), onclick: () => addUrls(false) }, icon('listPlus'), T('dl.addqueue')),
         h('button', { class: 'btn btn--primary btn--launch', type: 'button', onclick: () => addUrls(true) }, icon('download'), T('dl.download')))));
 
-  S.ui.composer = { ta, count, presets, dest, summary: $('.summary', composer), el: composer };
+  S.ui.composer = { ta, count, links, analyzeBtn, cutBtn, presets, dest, summary: $('.summary', composer), el: composer };
 
   const list = h('div', { class: 'queue__list', role: 'list', 'aria-label': T('dl.queue') });
   const queue = h('section', { class: 'queue' },
@@ -408,19 +411,142 @@ function renderDownload() {
     list);
   S.ui.queue = { list, rows: new Map(), stats: $('.queue__stats', queue), actions: $('.queue__actions', queue), empty: null };
 
-  updateLinkCount();
+  updateLinks();
   updatePresets();
   updateSummary();
   updateQueue();
   return h('div', { class: 'view view--fill' }, composer, queue);
 }
 
-function updateLinkCount() {
+function updateLinks() {
   const c = S.ui.composer;
   if (!c) return;
-  const n = parseUrls(S.draft).length;
+  const urls = parseUrls(S.draft), n = urls.length;
   c.count.textContent = n ? T('dl.linkcount', { n }) : '';
   c.count.classList.toggle('has-links', n > 0);
+  // Chaque lien a sa ligne (titre, durée, boutons). Analyser et Découper sous le champ ne
+  // restent que champ vide, pour faire découvrir ces fonctions.
+  c.analyzeBtn.hidden = c.cutBtn.hidden = n > 0;
+  c.links.hidden = n === 0;
+  const key = urls.join('\n');
+  if (key === c.linksKey) return;   // liste inchangée : pas de clignotement des miniatures
+  c.linksKey = key;
+  c.links.replaceChildren(...urls.map(linkRow));
+  queueLinkInfo();
+}
+
+// ---- titre et durée des liens : yt-dlp en arrière-plan, trois liens à la fois, une fois
+// le champ stable (un lien tapé à la main ne lance pas yt-dlp à chaque caractère).
+const LINKINFO = new Map();   // url → { state: 'busy' | 'done' | 'error' | 'none', info, error }
+let linkInfoBusy = 0, linkInfoTimer = 0;
+function queueLinkInfo() {
+  clearTimeout(linkInfoTimer);
+  linkInfoTimer = setTimeout(pumpLinkInfo, 600);
+}
+function pumpLinkInfo() {
+  const urls = parseUrls(S.draft);
+  while (linkInfoBusy < 3) {
+    const url = urls.find(u => !LINKINFO.has(u));
+    if (!url) return;
+    LINKINFO.set(url, { state: 'busy' });
+    linkInfoBusy++;
+    call('link_info', url).then(
+      r => LINKINFO.set(url, !r || r.need ? { state: 'none' }   // yt-dlp absent : relu après installation
+        : r.error ? { state: 'error', error: r.error } : { state: 'done', info: r }),
+      () => LINKINFO.set(url, { state: 'error' }),
+    ).finally(() => { linkInfoBusy--; refreshLinkRows(url); pumpLinkInfo(); });
+  }
+}
+function retryLinkInfo() {
+  for (const [url, st] of LINKINFO) if (st.state === 'none') LINKINFO.delete(url);
+  queueLinkInfo();
+}
+function refreshLinkRows(url) {
+  const c = S.ui.composer;
+  if (!c) return;
+  for (const row of c.links.querySelectorAll('.link')) {
+    if (row.dataset.url === url) row.replaceWith(linkRow(url, Number(row.dataset.i)));
+  }
+}
+
+// Liens du champ avec leur position dans le texte (même découpage que parseUrls)
+function draftLinks() {
+  return [...String(S.draft || '').matchAll(/\S+/g)].map(m => ({ url: m[0], start: m.index, end: m.index + m[0].length }));
+}
+function linkId(url) {
+  const vid = youtubeId(url);
+  if (vid) return vid;
+  try {
+    const u = new URL(url);
+    return decodeURIComponent((u.pathname + u.search).replace(/^\/+|\/+$/g, '')) || u.hostname;
+  } catch (e) { return url; }
+}
+// i : rang du lien dans le champ. Le texte a pu changer depuis l'affichage de la liste :
+// chaque action relit la position du lien et vérifie qu'il s'agit toujours du même.
+function linkRow(url, i) {
+  const st = LINKINFO.get(url) || { state: 'busy' };
+  const info = st.info || {};
+  const vid = youtubeId(url);
+  // Avant la réponse de yt-dlp, l'URL seule : une vidéo dans une playlist (watch?v=…&list=…)
+  // reste une vidéo.
+  const playlist = info.type ? info.type === 'playlist' : isPlaylistUrl(url) && !vid;
+  const fallback = playlist ? 'listVideo' : 'film';
+  const thumb = h('span', { class: 'link__thumb' });
+  const src = vid && !playlist ? `https://i.ytimg.com/vi/${vid}/mqdefault.jpg` : info.thumbnail;
+  if (src) {
+    const img = h('img', { src, alt: '', draggable: 'false', loading: 'lazy', referrerpolicy: 'no-referrer' });
+    img.addEventListener('error', () => img.replaceWith(icon(fallback)), { once: true });
+    thumb.append(img);
+  } else thumb.append(icon(fallback));
+
+  const meta = [];
+  if (playlist) meta.push(T('dl.link.playlist'));
+  if (playlist && info.count != null) meta.push(T('dl.link.videos', { n: info.count }));
+  if (info.live === 'is_live') meta.push(T('dl.link.live'));
+  else if (info.live === 'is_upcoming') meta.push(T('dl.link.upcoming'));
+  else if (info.duration) meta.push(humanDuration(info.duration));
+  if (info.uploader) meta.push(info.uploader);
+  if (hostOf(url)) meta.push(hostOf(url));
+  const status = st.state === 'busy' ? h('span', { class: 'link__status is-loading' }, T('dl.link.loading'))
+    : st.state === 'error' ? h('span', { class: 'link__status is-error', title: st.error || '' }, T('dl.link.error'))
+    : null;
+
+  const noCut = playlist ? T('ed.err.playlist')
+    : info.live === 'is_live' ? T('ed.err.live') : info.live === 'is_upcoming' ? T('ed.err.upcoming') : '';
+  let cut = iconBtn('scissors', T('dl.cut'), () => openEditor({ url, fromDraft: true }));
+  if (noCut) {   // bouton grisé sans événements souris : l'enveloppe porte l'explication
+    cut.disabled = true;
+    cut = h('span', { class: 'link__nocut', title: noCut }, cut);
+  }
+
+  return h('div', { class: 'link', role: 'listitem', dataset: { url, i: String(i) } },
+    h('button', { class: 'link__label', type: 'button', title: info.title ? info.title + '\n' + url : url, onclick: () => selectDraftLink(i, url) },
+      thumb,
+      h('span', { class: 'link__text' },
+        h('span', { class: 'link__title' + (info.title ? '' : ' is-url') }, info.title || linkId(url)),
+        h('span', { class: 'link__meta' }, meta.join(' · '), meta.length && status ? ' · ' : null, status))),
+    iconBtn('scan', T('dl.analyze'), () => openAnalyze(url)),
+    cut,
+    iconBtn('x', T('menu.remove'), () => removeDraftLink(i, url)));
+}
+function selectDraftLink(i, url) {
+  const c = S.ui.composer, l = draftLinks()[i];
+  if (!c || !l || l.url !== url) return;
+  c.ta.focus();
+  c.ta.setSelectionRange(l.start, l.end);
+}
+// Retire un lien du champ ; sa ligne aussi, si elle ne contenait rien d'autre.
+function removeDraftLink(i, url) {
+  const l = draftLinks()[i];
+  if (!l || l.url !== url) return;
+  const text = S.draft;
+  const a = text.lastIndexOf('\n', l.start - 1) + 1;
+  let b = text.indexOf('\n', l.end);
+  if (b < 0) b = text.length;
+  const rest = (text.slice(a, l.start) + text.slice(l.end, b)).trim();
+  S.draft = rest ? text.slice(0, a) + rest + text.slice(b) : text.slice(0, a) + text.slice(b + 1);
+  if (S.ui.composer) S.ui.composer.ta.value = S.draft;
+  updateLinks();
 }
 
 function presetMatches(key) {
@@ -494,7 +620,7 @@ function insertDraft(text) {
     c.ta.setSelectionRange(S.draft.length, S.draft.length);
     c.ta.scrollTop = c.ta.scrollHeight;
   }
-  updateLinkCount();
+  updateLinks();
 }
 async function pasteLinks() {
   let text = '';
@@ -521,7 +647,7 @@ async function addUrls(start, force = false) {
   if (r.error) return alertDialog(r.error, { kind: 'bad' });
   S.draft = '';
   if (S.ui.composer) S.ui.composer.ta.value = '';
-  updateLinkCount();
+  updateLinks();
   applyJobs(r);
   if (r.skipped) toast(T('msg.duplicates_skipped', { n: r.skipped }), 'warn');
 }
@@ -1493,13 +1619,8 @@ function editJob(id) {
   if (job && EDITABLE.has(job.status)) openEditor({ url: job.url, jobId: id, clip: job.clip });
 }
 function removeFromDraft(url) {
-  const lines = S.draft.split('\n');
-  const i = lines.findIndex(l => l.trim() === url);
-  if (i < 0) return;
-  lines.splice(i, 1);
-  S.draft = lines.join('\n');
-  if (S.ui.composer) S.ui.composer.ta.value = S.draft;
-  updateLinkCount();
+  const i = draftLinks().findIndex(l => l.url === url);
+  if (i >= 0) removeDraftLink(i, url);
 }
 
 // ---- ouverture et fermeture
@@ -2505,6 +2626,7 @@ function onEvent(ev) {
       Object.assign(S.bin, { ytdlp: ev.ytdlp, ffmpeg: ev.ffmpeg, deno: ev.deno, ytdlpPath: ev.ytdlp_path || '', ffmpegPath: ev.ffmpeg_path || '', denoPath: ev.deno_path || '', checking: !!ev.ytdlp });
       if (ev.preview != null) setPreview(ev.preview);
       updateBins();
+      if (ev.ytdlp) retryLinkInfo();
       break;
     case 'install_status': case 'install_progress': case 'install_step_done': case 'install_all_done':
       onInstallEvent(ev);

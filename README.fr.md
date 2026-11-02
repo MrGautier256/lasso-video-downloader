@@ -43,17 +43,17 @@ En bas du menu latéral :
 
 ## Utilisation rapide
 
-1. Coller un ou plusieurs liens (un par ligne) dans la section **Téléchargement** : bouton Coller, Ctrl+V n'importe où dans la page, ou glisser-déposer un lien depuis le navigateur.
+1. Coller un ou plusieurs liens (un par ligne) dans la section **Téléchargement** : bouton Coller, Ctrl+V n'importe où dans la page, ou glisser-déposer un lien depuis le navigateur. Chaque lien s'affiche sous le champ avec sa miniature, son titre et sa durée (pour une playlist : son titre, son nombre de vidéos et leur durée totale), et ses propres boutons Analyser, Découper et Retirer.
 2. Choisir un préréglage en un clic (Meilleure, 1080p, 720p, MP3, M4A) ou affiner dans les réglages. Le résumé sous les liens montre ce qui sera appliqué (format, sous-titres, playlist, simulation...) ; un clic sur une étiquette ouvre le réglage correspondant.
 3. Cliquer sur **Télécharger** (ou Ctrl+Entrée). La file affiche miniature (YouTube), progression, vitesse, temps restant et taille.
 
 Dans la file : clic pour sélectionner (Ctrl/Maj + clic pour plusieurs), clic droit pour réessayer, annuler, copier le lien ou réordonner, Suppr pour retirer la sélection, double-clic pour ouvrir le dossier.
 
-Le bouton **Analyser la vidéo** affiche titre, durée, miniature et la liste complète des formats disponibles (filtrable vidéo / audio) ; on peut y choisir manuellement un format vidéo + un format audio précis.
+Le bouton **Analyser** d'un lien affiche titre, durée, miniature et la liste complète des formats disponibles (filtrable vidéo / audio) ; on peut y choisir manuellement un format vidéo + un format audio précis. Sur une playlist, il liste ses vidéos avec leur durée.
 
 ## Découper avant de télécharger
 
-Pour ne garder qu'un passage d'une vidéo (ou plusieurs), cliquez sur **Découper…** à côté des liens : l'option est facultative, le téléchargement normal n'en dépend pas. Le même éditeur s'ouvre depuis la fenêtre d'analyse ("Prévisualiser et découper") et depuis une ligne de la file pas encore lancée (icône ciseaux).
+Pour ne garder qu'un passage d'une vidéo (ou plusieurs), cliquez sur les ciseaux du lien, sous le champ (grisés pour une playlist ou un direct en cours) : l'option est facultative, le téléchargement normal n'en dépend pas. Le même éditeur s'ouvre depuis la fenêtre d'analyse ("Prévisualiser et découper") et depuis une ligne de la file pas encore lancée (icône ciseaux).
 
 - L'éditeur prépare un aperçu, au plus en 720p, lu directement dans l'application. Si la lecture directe n'est pas possible, il crée un aperçu local en 720p (automatiquement pour une vidéo de moins de 30 minutes).
 - La frise montre les vignettes de la vidéo, ses chapitres et, sur YouTube, les moments les plus revus. Glissez les poignées des passages, ou posez début et fin à la tête de lecture avec **I** et **O** ; **N** ajoute un passage, **Espace** lit ou met en pause, **,** et **.** avancent image par image (tous les raccourcis : bouton clavier de l'éditeur).

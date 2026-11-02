@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Przytnij…",
     "dl.cut.tip": "Otwiera podgląd linku pod kursorem, aby wybrać\nfragment lub fragmenty do pobrania.",
+    "dl.link.loading": "Pobieranie informacji…",
+    "dl.link.error": "Informacje niedostępne",
+    "dl.link.playlist": "Playlista",
+    "dl.link.videos": "Filmy: {n}",
+    "dl.link.live": "Na żywo",
+    "dl.link.upcoming": "Zaplanowana transmisja",
     "an.cut": "Podgląd i przycinanie",
     "menu.cut": "Przytnij…",
     "job.parts": "Fragmenty: {n} · {d}",
