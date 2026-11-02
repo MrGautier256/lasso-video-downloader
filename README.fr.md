@@ -101,15 +101,17 @@ Signature du code gratuite fournie par [SignPath.io](https://about.signpath.io/)
 - Auteurs et relecteurs : [Gautier Mekhelian](https://github.com/MrGautier256)
 - Approbateurs : [Gautier Mekhelian](https://github.com/MrGautier256)
 
-La version Windows est compilée par GitHub Actions à partir de ce dépôt, et chaque version signée est approuvée à la main.
+La version Windows est compilée par GitHub Actions à partir de ce dépôt, et chaque version signée est approuvée à la main. Seul `Lasso.exe` est signé par ce projet : les bibliothèques tierces incluses dans l'archive (Python, pywebview, WebView2) et les outils téléchargés au premier lancement (yt-dlp, FFmpeg, Deno) ne le sont pas par ce projet.
 
 ### Confidentialité
 
 Lasso n'envoie aucune donnée personnelle et ne contient ni statistiques ni télémétrie. Il ne se connecte qu'à :
 
 - **les sites des vidéos** que vous lui demandez d'analyser ou de télécharger, y compris pour afficher leurs miniatures ;
-- **GitHub**, pour vérifier au plus une fois par jour si une nouvelle version de Lasso existe (désactivable : *Vérifier les mises à jour au démarrage*, page de réglages *Avancé*), et pour télécharger yt-dlp, FFmpeg et Deno quand vous le demandez ([déclaration de confidentialité de GitHub](https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement)) ;
+- **GitHub**, pour vérifier au plus une fois par jour si une nouvelle version de Lasso existe (désactivable : *Vérifier les mises à jour au démarrage*, page de réglages *Avancé*, section *Application*), et pour télécharger yt-dlp, FFmpeg et Deno quand vous le demandez ([déclaration de confidentialité de GitHub](https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement)) ;
 - **SponsorBlock** (sponsor.ajay.app), par yt-dlp, seulement si vous activez cette option dans la page de réglages *Fichiers et métadonnées*.
+
+Les cookies de votre navigateur ne sont lus, sur votre ordinateur, que si vous activez *Utiliser les cookies du navigateur* (page *Réseau et comptes*), et ne sont envoyés qu'au site de la vidéo téléchargée.
 
 ## Notes
 

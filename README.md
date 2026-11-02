@@ -101,15 +101,17 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 - Committers and reviewers: [Gautier Mekhelian](https://github.com/MrGautier256)
 - Approvers: [Gautier Mekhelian](https://github.com/MrGautier256)
 
-The Windows version is built by GitHub Actions from this repository, and each signed version is approved by hand.
+The Windows version is built by GitHub Actions from this repository, and each signed version is approved by hand. Only `Lasso.exe` is signed by this project: the third-party libraries bundled in the archive (Python, pywebview, WebView2) and the tools downloaded on first launch (yt-dlp, FFmpeg, Deno) are not signed by this project.
 
 ### Privacy
 
 Lasso sends no personal data and contains no analytics or telemetry. It only connects to:
 
 - **the sites of the videos** you ask it to analyze or download, including to show their thumbnails;
-- **GitHub**, to check at most once a day whether a new version of Lasso exists (can be turned off: *Check for updates at startup*, *Advanced* settings page), and to download yt-dlp, FFmpeg and Deno when you ask for them ([GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement));
+- **GitHub**, to check at most once a day whether a new version of Lasso exists (can be turned off: *Check for updates at startup*, *Advanced* settings page, *Application* section), and to download yt-dlp, FFmpeg and Deno when you ask for them ([GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement));
 - **SponsorBlock** (sponsor.ajay.app), through yt-dlp, only if you turn that option on in the *Files & metadata* settings page.
+
+Your browser's cookies are read, on your computer, only if you turn on *Use browser cookies* (*Network & accounts* page), and are only sent to the site of the video being downloaded.
 
 ## Notes
 
