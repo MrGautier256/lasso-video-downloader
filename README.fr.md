@@ -8,11 +8,11 @@
 
 **Version prête à l'emploi (recommandé) :** depuis la page [Releases](../../releases), téléchargez l'archive correspondant à votre système, extrayez-la où vous voulez, puis lancez l'exécutable dans le dossier extrait. Aucune installation, aucun prérequis.
 
-- **Windows :** `YTDL-Interface-windows.zip`, puis lancez `YTDL-Interface.exe`.
-- **Linux (x86_64) :** `YTDL-Interface-linux.tar.gz`, puis :
+- **Windows :** `Lasso-windows.zip`, puis lancez `Lasso.exe`.
+- **Linux (x86_64) :** `Lasso-linux.tar.gz`, puis :
   ```bash
-  tar -xzf YTDL-Interface-linux.tar.gz
-  ./YTDL-Interface/YTDL-Interface
+  tar -xzf Lasso-linux.tar.gz
+  ./Lasso/Lasso
   ```
   Fonctionne sur les distributions avec glibc 2.35 ou plus récente (Ubuntu 22.04+, Debian 12+, Fedora 36+, Linux Mint 21+...).
 
