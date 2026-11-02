@@ -8,6 +8,55 @@ def _digits(s):
     return m.group(0) if m else ""
 
 
+# ------------------------------------------------------------------ temps et passages
+_TIME = re.compile(r"^(?:(\d+):)?(?:(\d+):)?(\d+(?:[.,]\d*)?)$")
+
+
+def parse_time(text):
+    """Secondes (float) depuis "90", "1:30", "01:30.5", "1:02:03,250". ValueError sinon.
+    Mêmes règles que parseTime() dans web/app.js."""
+    m = _TIME.match(str(text or "").strip())
+    if not m:
+        raise ValueError("invalid time: %r" % text)
+    a, b, sec = m.groups()
+    hours, minutes = (int(a), int(b)) if b is not None else (0, int(a or 0))
+    return hours * 3600 + minutes * 60 + float(sec.replace(",", "."))
+
+
+def format_time(seconds):
+    """"hh:mm:ss.mmm" (mêmes règles que fmtTime() dans web/app.js)."""
+    ms = int(round(max(0.0, float(seconds)) * 1000))
+    h, rem = divmod(ms, 3600000)
+    m, rem = divmod(rem, 60000)
+    s, ms = divmod(rem, 1000)
+    return "%02d:%02d:%02d.%03d" % (h, m, s, ms)
+
+
+def normalize_sections(sections):
+    """Passages [début, fin] triés, sans chevauchement (ceux qui se recouvrent sont
+    réunis), en secondes ; ignore les passages vides."""
+    out = []
+    for start, end in sorted((float(a), float(b)) for a, b in sections):
+        if end <= start:
+            continue
+        if out and start <= out[-1][1]:
+            out[-1][1] = max(out[-1][1], end)
+        else:
+            out.append([start, end])
+    return out
+
+
+def format_sections(sections):
+    """Argument de --download-sections : "*83.250-97.000,600.000-645.500"."""
+    return "*" + ",".join("%.3f-%.3f" % (a, b) for a, b in normalize_sections(sections))
+
+
+# Ré-encodage rapide des coupes précises : sans encodeur imposé, ffmpeg prendrait celui
+# par défaut du conteneur (très lent en WebM/VP9).
+_PRECISE_H264 = "-c:v libx264 -preset veryfast -crf 18 -c:a aac -b:a 192k"
+_PRECISE_VP9 = "-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -crf 32 -b:v 0 -c:a libopus"
+
+
 def build_network_args(cfg):
     """Options réseau/authentification, réutilisées aussi pour l'analyse."""
     args = []
@@ -27,10 +76,14 @@ def build_network_args(cfg):
         args += ["--force-ipv4"]
     if cfg.get("geo_bypass"):
         args += ["--geo-bypass"]
+    # Moteur JavaScript dont yt-dlp a besoin pour YouTube. "_deno" est fourni par
+    # l'application (chemin trouvé) : ce n'est pas un réglage enregistré.
+    if cfg.get("_deno"):
+        args += ["--js-runtimes", "deno:%s" % cfg["_deno"]]
     return args
 
 
-def needs_ffmpeg(cfg):
+def needs_ffmpeg(cfg, clip=None):
     """Estime si les réglages actuels nécessitent ffmpeg pour aboutir sans erreur.
 
     Couvre les cas certains (extraction audio, embed, recode, découpage...) ainsi
@@ -38,6 +91,8 @@ def needs_ffmpeg(cfg):
     finit presque toujours par fusionner un flux vidéo et un flux audio séparés
     (DASH), ce que yt-dlp ne peut faire sans ffmpeg.
     """
+    if clip:
+        return True   # --download-sections passe toujours par ffmpeg
     mode = cfg.get("mode", "video")
     if mode == "audio":
         return True
@@ -67,12 +122,10 @@ def needs_ffmpeg(cfg):
     return False
 
 
-def build_command(cfg, url, ytdlp_path, ffmpeg_path=None):
-    args = [ytdlp_path, "--newline", "--progress"]
-    if ffmpeg_path:
-        args += ["--ffmpeg-location", ffmpeg_path]
-
-    # ----- Format et qualité -----
+def format_args(cfg, clip=None):
+    """Options de choix du format (et d'extraction audio) : servent au téléchargement
+    et à l'estimation de taille de l'éditeur de passages."""
+    args = []
     mode = cfg.get("mode", "video")
     custom = cfg.get("custom_format", "").strip()
     if custom:
@@ -97,11 +150,42 @@ def build_command(cfg, url, ytdlp_path, ffmpeg_path=None):
         res = _digits(cfg.get("max_res", ""))
         if res:
             sort.append("res:%s" % res)
+        if clip:
+            # Passage : préférer les variantes HLS, découpées en segments, dont ffmpeg ne
+            # lit que ceux du passage (d'un flux DASH, il lit tout le fichier).
+            sort.append("proto:m3u8")
         vc = cfg.get("vcodec", "auto").strip()
         if vc and vc != "auto":
             sort.append("vcodec:%s" % vc)
         if sort:
             args += ["-S", ",".join(sort)]
+    return args
+
+
+def output_template(cfg, clip=None):
+    tmpl = cfg.get("output_template", "").strip() or "%(title)s.%(ext)s"
+    if clip and "section_" not in tmpl:
+        # Un fichier par passage : sans le début dans le nom, le deuxième passage
+        # porterait le nom du premier et serait sauté.
+        mark = " [%(section_start>%H-%M-%S)s]"
+        if tmpl.endswith(".%(ext)s"):
+            tmpl = tmpl[:-len(".%(ext)s")] + mark + ".%(ext)s"
+        else:
+            tmpl += mark
+    return tmpl
+
+
+def build_command(cfg, url, ytdlp_path, ffmpeg_path=None, clip=None, info_json=None, extra_args=None):
+    """Commande yt-dlp. `clip` ({"sections": [[début, fin], ...], "precise": bool,
+    "merge": bool}) limite le téléchargement à ces passages ; `info_json` remplace l'URL
+    par --load-info-json (passages YouTube, cf. ytdlgui/clips.py)."""
+    args = [ytdlp_path, "--newline", "--progress"]
+    if ffmpeg_path:
+        args += ["--ffmpeg-location", ffmpeg_path]
+
+    # ----- Format et qualité -----
+    args += format_args(cfg, clip)
+    if cfg.get("mode", "video") != "audio":
         cont = cfg.get("container", "auto").strip()
         if cont and cont != "auto":
             args += ["--recode-video" if cfg.get("recode") else "--remux-video", cont]
@@ -122,7 +206,9 @@ def build_command(cfg, url, ytdlp_path, ffmpeg_path=None):
         args += ["--embed-subs"]
 
     # ----- Playlist et filtres -----
-    if cfg.get("playlist_mode", "single") == "single":
+    # Des passages visent une vidéo précise : ni playlist, ni filtres, ni archive
+    # (l'archive marquerait la vidéo comme prise et sauterait l'extrait suivant).
+    if clip or cfg.get("playlist_mode", "single") == "single":
         args += ["--no-playlist"]
     else:
         args += ["--yes-playlist"]
@@ -133,12 +219,12 @@ def build_command(cfg, url, ytdlp_path, ffmpeg_path=None):
         ("max_filesize", "--max-filesize"),
     ):
         v = cfg.get(key, "").strip()
-        if v:
+        if v and not clip:
             args += [flag, v]
     md = cfg.get("max_downloads", "").strip()
-    if md.isdigit() and int(md) > 0:
+    if md.isdigit() and int(md) > 0 and not clip:
         args += ["--max-downloads", md]
-    if cfg.get("use_archive"):
+    if cfg.get("use_archive") and not clip:
         ap = cfg.get("archive_path", "").strip() or "archive.txt"
         args += ["--download-archive", ap]
     if cfg.get("ignore_errors"):
@@ -148,8 +234,7 @@ def build_command(cfg, url, ytdlp_path, ffmpeg_path=None):
     dest = cfg.get("dest_dir", "").strip()
     if dest:
         args += ["-P", dest]
-    tmpl = cfg.get("output_template", "").strip() or "%(title)s.%(ext)s"
-    args += ["-o", tmpl]
+    args += ["-o", output_template(cfg, clip)]
     if cfg.get("restrict_filenames"):
         args += ["--restrict-filenames"]
     if cfg.get("no_mtime"):
@@ -190,11 +275,14 @@ def build_command(cfg, url, ytdlp_path, ffmpeg_path=None):
     args += build_network_args(cfg)
 
     # ----- Avancé -----
-    sec = cfg.get("sections", "").strip()
-    if sec:
-        args += ["--download-sections", sec]
-        if cfg.get("force_keyframes"):
-            args += ["--force-keyframes-at-cuts"]
+    if clip:
+        args += clip_args(cfg, clip)
+    else:
+        sec = cfg.get("sections", "").strip()
+        if sec:
+            args += ["--download-sections", sec]
+            if cfg.get("force_keyframes"):
+                args += ["--force-keyframes-at-cuts"]
     if cfg.get("simulate"):
         args += ["--simulate"]
     if cfg.get("verbose"):
@@ -206,5 +294,34 @@ def build_command(cfg, url, ytdlp_path, ffmpeg_path=None):
         except ValueError:
             args += extra.split()
 
-    args.append(url)
+    args += list(extra_args or [])
+    if info_json:
+        args += ["--load-info-json", info_json]
+    else:
+        args.append(url)
     return args
+
+
+def clip_args(cfg, clip):
+    """Options propres aux passages d'une tâche (remplacent pour elle le réglage global
+    "Découpage")."""
+    args = ["--download-sections", format_sections(clip["sections"]),
+            # ffmpeg sans bannière ni métadonnées : seules ses statistiques (time=...)
+            # restent, et servent à la progression (cf. engine.py).
+            "--downloader-args", "ffmpeg_i:-hide_banner -loglevel warning -stats"]
+    if clip_is_precise(clip):
+        args += ["--force-keyframes-at-cuts"]
+        if cfg.get("mode", "video") != "audio":
+            cont = cfg.get("container", "auto").strip()
+            if cont == "webm":
+                args += ["--downloader-args", "ffmpeg_o:" + _PRECISE_VP9]
+            else:
+                args += ["--merge-output-format", cont if cont in ("mp4", "mkv") else "mp4",
+                         "--downloader-args", "ffmpeg_o:" + _PRECISE_H264]
+    return args
+
+
+def clip_is_precise(clip):
+    """La fusion de plusieurs passages impose des coupes précises : des morceaux copiés
+    tels quels (coupés à l'image-clé) se raccordent mal."""
+    return bool(clip.get("precise") or (clip.get("merge") and len(clip["sections"]) > 1))

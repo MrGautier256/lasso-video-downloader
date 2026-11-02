@@ -25,7 +25,7 @@ pip install -r requirements.txt
 - **Windows:** double-click `main.pyw`. The interface relies on WebView2, already present on Windows 10 and 11.
 - **Linux:** `python3 main.pyw`. pip installs the Qt WebEngine backend; the GTK backend from system packages (`python3-gi` and `gir1.2-webkit2-4.1` on Debian/Ubuntu) works too.
 
-Either way, if yt-dlp and/or ffmpeg are missing on the machine, the app detects it on startup and offers an install window with a per-component progress bar; installation runs in the background without closing the app. Also reachable any time from the Advanced section ("Download yt-dlp" / "Install ffmpeg" / "Update yt-dlp"), or by clicking the yt-dlp / ffmpeg status at the bottom of the menu. Settings and binaries are stored inside that same folder (`settings.json`, `bin/`), next to the executable, not in a system directory — keep the whole folder together.
+Either way, if yt-dlp and/or ffmpeg are missing on the machine, the app detects it on startup and offers an install window with a per-component progress bar; installation runs in the background without closing the app. Also reachable any time from the Advanced section ("Download yt-dlp" / "Install ffmpeg" / "Update yt-dlp"), or by clicking the yt-dlp / ffmpeg status at the bottom of the menu. [Deno](https://deno.com), optional but recommended for YouTube (yt-dlp uses it to get every format), installs the same way ("Install Deno"). Settings and binaries are stored inside that same folder (`settings.json`, `bin/`), next to the executable, not in a system directory — keep the whole folder together.
 
 ## Language and theme
 
@@ -42,6 +42,16 @@ At the bottom of the side menu:
 In the queue: click to select (Ctrl/Shift + click for several), right-click to retry, cancel, copy the link or reorder, Delete to remove the selection, double-click to open the folder.
 
 The **Analyze video** button shows title, duration, thumbnail and the full list of available formats (filterable video / audio); you can manually pick a specific video format + audio format from there.
+
+## Cut before downloading
+
+To keep only one part of a video (or several), click **Cut…** next to the links: the option is optional, normal downloads don't depend on it. The same editor opens from the analysis window ("Preview and cut") and from a queue row that hasn't started yet (scissors icon).
+
+- The editor prepares a preview, up to 720p, played right in the app. If direct playback isn't possible, it creates a local 720p preview (automatically for videos under 30 minutes).
+- The timeline shows the video's thumbnails, its chapters and, on YouTube, the most replayed moments. Drag the part handles, or set start and end at the playhead with **I** and **O**; **N** adds a part, **Space** plays or pauses, **,** and **.** step frame by frame (all shortcuts: keyboard button in the editor).
+- Times can also be typed (`1:30`, `01:02:03.250`...).
+- Your choice: one file per part, or a single file with the parts joined. "Precise cuts" cuts exactly at the chosen times by re-encoding (slower); otherwise the cut snaps to the nearest keyframe.
+- Only the parts are downloaded, with the usual format settings (ffmpeg is required). On YouTube, the app reads the video's HLS variants, split into segments, to download only what's needed.
 
 ## The sections
 
@@ -73,5 +83,6 @@ YTDL Interface is distributed under the MIT license (see [LICENSE](LICENSE)).
 On first launch, the app downloads for its own operation:
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense / public domain)
 - [ffmpeg](https://github.com/BtbN/FFmpeg-Builds) (GPL build by BtbN)
+- [Deno](https://github.com/denoland/deno) (MIT license), optional, on demand
 
-The interface uses [pywebview](https://github.com/r0x0r/pywebview) (BSD license), the [Audiowide](https://fonts.google.com/specimen/Audiowide) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) fonts (SIL Open Font License, bundled in `ytdlgui/web/fonts/`) and [Lucide](https://lucide.dev) icon paths (ISC license). Its style follows the Open Design Cosmic design system.
+The interface uses [pywebview](https://github.com/r0x0r/pywebview) (BSD license), the [Audiowide](https://fonts.google.com/specimen/Audiowide) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) fonts (SIL Open Font License, bundled in `ytdlgui/web/fonts/`) [Lucide](https://lucide.dev) icon paths (ISC license) and [hls.js](https://github.com/video-dev/hls.js) (Apache 2.0 license, bundled in `ytdlgui/web/vendor/`) for the clip editor preview. Its style follows the Open Design Cosmic design system.
