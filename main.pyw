@@ -59,28 +59,6 @@ def _restore_child_env():
         os.environ.pop("LD_LIBRARY_PATH", None)
 
 
-def _unblock_own_files():
-    """Zip téléchargé avec un navigateur puis extrait par l'Explorateur : Windows marque
-    chaque fichier comme venu d'Internet (flux Zone.Identifier) et .NET refuse alors de
-    charger Python.Runtime.dll ; l'interface ne démarre pas (« Failed to resolve
-    Python.Runtime.Loader.Initialize »). On retire cette marque des fichiers de l'app,
-    comme la case « Débloquer » de leurs propriétés. Rien n'est parcouru si la DLL n'est
-    pas marquée."""
-    if os.name != "nt" or not getattr(sys, "frozen", False):
-        return
-    internal = os.path.join(APP_DIR, "_internal")
-    probe = os.path.join(internal, "pythonnet", "runtime", "Python.Runtime.dll")
-    if not os.path.exists(probe + ":Zone.Identifier"):
-        return
-    paths = [sys.executable] + [os.path.join(root, name)
-                                for root, _dirs, files in os.walk(internal) for name in files]
-    for path in paths:
-        try:
-            os.remove(path + ":Zone.Identifier")
-        except OSError:
-            pass
-
-
 def _message(title, text, error=False):
     """Boîte de message native, utilisable avant (ou sans) l'interface web."""
     if os.name == "nt":
@@ -108,7 +86,6 @@ def main():
         _message("Lasso",
                  "Lasso est déjà ouvert.\nLasso is already running.")
         return
-    _unblock_own_files()
     try:
         from ytdlgui.app import run
         run()
@@ -120,8 +97,9 @@ def main():
         except OSError:
             pass
         if "Python.Runtime" in err:
-            # Fichiers encore marqués « venus d'Internet » (dossier en lecture seule...) :
-            # le geste qui débloque, plutôt que la trace brute.
+            # .NET refuse les DLL marquées « venues d'Internet » ; Lasso.exe.config (posé
+            # par lasso.spec) l'autorise. S'il manque : le geste qui débloque, plutôt que
+            # la trace brute.
             _message("Lasso : erreur",
                      "Windows a bloqué des fichiers de Lasso parce qu'ils viennent d'Internet.\n\n"
                      "Faites un clic droit sur le fichier zip téléchargé, choisissez Propriétés, "

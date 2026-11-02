@@ -90,6 +90,27 @@ To keep only one part of a video (or several), click the link's scissors under t
 
 Every option is explained right under its name.
 
+## Uninstall
+
+Lasso installs nothing on the system: its settings, its tools (`bin` folder) and its history are kept in its own folder. To uninstall it, delete that folder.
+
+## Code signing policy
+
+Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).
+
+- Committers and reviewers: [Gautier Mekhelian](https://github.com/MrGautier256)
+- Approvers: [Gautier Mekhelian](https://github.com/MrGautier256)
+
+The Windows version is built by GitHub Actions from this repository, and each signed version is approved by hand.
+
+### Privacy
+
+Lasso sends no personal data and contains no analytics or telemetry. It only connects to:
+
+- **the sites of the videos** you ask it to analyze or download, including to show their thumbnails;
+- **GitHub**, to check at most once a day whether a new version of Lasso exists (can be turned off: *Check for updates at startup*, *Advanced* settings page), and to download yt-dlp, FFmpeg and Deno when you ask for them ([GitHub's privacy statement](https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement));
+- **SponsorBlock** (sponsor.ajay.app), through yt-dlp, only if you turn that option on in the *Files & metadata* settings page.
+
 ## Notes
 
 - Settings are saved in `settings.json`, next to the executable (the password is never saved).

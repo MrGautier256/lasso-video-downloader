@@ -90,6 +90,27 @@ Pour ne garder qu'un passage d'une vidéo (ou plusieurs), cliquez sur les ciseau
 
 Chaque option est expliquée directement sous son nom.
 
+## Désinstaller
+
+Lasso n'installe rien dans le système : ses réglages, ses outils (dossier `bin`) et son historique sont rangés dans son propre dossier. Pour le désinstaller, supprimez ce dossier.
+
+## Politique de signature du code (code signing policy)
+
+Signature du code gratuite fournie par [SignPath.io](https://about.signpath.io/), certificat de la [SignPath Foundation](https://signpath.org/).
+
+- Auteurs et relecteurs : [Gautier Mekhelian](https://github.com/MrGautier256)
+- Approbateurs : [Gautier Mekhelian](https://github.com/MrGautier256)
+
+La version Windows est compilée par GitHub Actions à partir de ce dépôt, et chaque version signée est approuvée à la main.
+
+### Confidentialité
+
+Lasso n'envoie aucune donnée personnelle et ne contient ni statistiques ni télémétrie. Il ne se connecte qu'à :
+
+- **les sites des vidéos** que vous lui demandez d'analyser ou de télécharger, y compris pour afficher leurs miniatures ;
+- **GitHub**, pour vérifier au plus une fois par jour si une nouvelle version de Lasso existe (désactivable : *Vérifier les mises à jour au démarrage*, page de réglages *Avancé*), et pour télécharger yt-dlp, FFmpeg et Deno quand vous le demandez ([déclaration de confidentialité de GitHub](https://docs.github.com/fr/site-policy/privacy-policies/github-general-privacy-statement)) ;
+- **SponsorBlock** (sponsor.ajay.app), par yt-dlp, seulement si vous activez cette option dans la page de réglages *Fichiers et métadonnées*.
+
 ## Notes
 
 - Les réglages sont mémorisés dans `settings.json`, à côté de l'exécutable (le mot de passe n'est jamais enregistré).
