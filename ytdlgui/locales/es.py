@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Recortar…",
     "dl.cut.tip": "Abre una vista previa del enlace bajo el cursor para elegir\nel fragmento o los fragmentos a descargar.",
+    "dl.link.loading": "Obteniendo información…",
+    "dl.link.error": "Información no disponible",
+    "dl.link.playlist": "Lista",
+    "dl.link.videos": "{n} vídeo(s)",
+    "dl.link.live": "En directo",
+    "dl.link.upcoming": "Directo programado",
     "an.cut": "Previsualizar y recortar",
     "menu.cut": "Recortar…",
     "job.parts": "{n} fragmento(s) · {d}",

@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Taglia…",
     "dl.cut.tip": "Apre un'anteprima del link sotto il cursore per scegliere\nil passaggio o i passaggi da scaricare.",
+    "dl.link.loading": "Lettura delle informazioni…",
+    "dl.link.error": "Informazioni non disponibili",
+    "dl.link.playlist": "Playlist",
+    "dl.link.videos": "{n} video",
+    "dl.link.live": "In diretta",
+    "dl.link.upcoming": "Diretta programmata",
     "an.cut": "Anteprima e taglio",
     "menu.cut": "Taglia…",
     "job.parts": "{n} passaggio/i · {d}",

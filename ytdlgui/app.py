@@ -841,11 +841,10 @@ class Api:
         if not ytdlp:
             return {"need": "ytdlp"}
         cfg = self._cfg()
-        cmd = [ytdlp, "-J", "--no-warnings"]
-        if cfg.get("playlist_mode") == "full":
-            cmd += ["--yes-playlist", "--flat-playlist"]
-        else:
-            cmd += ["--no-playlist"]
+        # --flat-playlist : une playlist liste ses vidéos sans les analyser une à une (sans
+        # effet sur une vidéo seule, ni sur une vidéo de playlist avec --no-playlist).
+        cmd = [ytdlp, "-J", "--no-warnings", "--flat-playlist",
+               "--yes-playlist" if cfg.get("playlist_mode") == "full" else "--no-playlist"]
         cmd += cmdmod.build_network_args(cfg)
         cmd.append(url)
         try:
@@ -856,6 +855,37 @@ class Api:
             return {"error": (out.stderr or "").strip()[-800:] or T("an.nodata")}
         except Exception as exc:
             return {"error": str(exc)}
+
+    def link_info(self, url):
+        """Titre et durée d'un lien, pour la liste sous le champ ; pour une playlist, son
+        titre, son nombre de vidéos et leur durée totale. Mêmes options de playlist que le
+        téléchargement : la ligne montre ce qui sera récupéré."""
+        ytdlp, _ = self._paths()
+        if not ytdlp:
+            return {"need": "ytdlp"}
+        cfg = self._cfg()
+        cmd = [ytdlp, "-J", "--no-warnings", "--flat-playlist",
+               "--yes-playlist" if cfg.get("playlist_mode") == "full" else "--no-playlist"]
+        cmd += cmdmod.build_network_args(cfg)
+        cmd.append(url)
+        try:
+            out = subprocess.run(cmd, capture_output=True, text=True, timeout=90,
+                                 encoding="utf-8", errors="replace", creationflags=CREATE_NO_WINDOW)
+            info = jsonmod.loads(out.stdout) if out.returncode == 0 and out.stdout.strip() else None
+        except Exception as exc:
+            return {"error": str(exc)}
+        if not isinstance(info, dict):
+            return {"error": (out.stderr or "").strip()[-400:] or T("an.nodata")}
+        thumbs = [t.get("url") for t in info.get("thumbnails") or [] if t.get("url")]
+        res = {"title": info.get("title"), "uploader": info.get("uploader") or info.get("channel"),
+               "thumbnail": info.get("thumbnail") or (thumbs[-1] if thumbs else None)}
+        if info.get("_type") == "playlist":
+            durations = [e.get("duration") for e in info.get("entries") or [] if e]
+            res.update(type="playlist", count=info.get("playlist_count") or len(durations),
+                       duration=sum(durations) if durations and all(durations) else None)
+        else:
+            res.update(type="video", duration=info.get("duration"), live=info.get("live_status"))
+        return res
 
 
 def _trim_info(info):

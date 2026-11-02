@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Cortar…",
     "dl.cut.tip": "Abre uma pré-visualização do link sob o cursor para escolher\no ou os excertos a transferir.",
+    "dl.link.loading": "A obter informações…",
+    "dl.link.error": "Informações indisponíveis",
+    "dl.link.playlist": "Playlist",
+    "dl.link.videos": "{n} vídeo(s)",
+    "dl.link.live": "Em direto",
+    "dl.link.upcoming": "Direto agendado",
     "an.cut": "Pré-visualizar e cortar",
     "menu.cut": "Cortar…",
     "job.parts": "{n} excerto(s) · {d}",
