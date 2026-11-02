@@ -1,4 +1,4 @@
-/* YTDL Interface : interface (pywebview).
+/* Lasso : interface (pywebview).
    Toute la logique yt-dlp (file, commande, binaires, réglages) reste côté Python, dans
    ytdlgui/app.py ; cette page affiche l'état et relaie les actions via window.pywebview.api. */
 (() => {
@@ -276,7 +276,7 @@ function renderSidebar() {
   const side = h('aside', { class: 'sidebar' },
     h('div', { class: 'brand' }, html(LOGO),
       h('div', { class: 'brand__text' },
-        h('div', { class: 'brand__name' }, 'YTDL', h('b', null, 'Interface')),
+        h('div', { class: 'brand__name' }, 'Lasso'),
         h('span', { class: 'brand__ver' }, 'v' + S.version + ' · yt-dlp'),
         S.ui.updSlot = h('div', { class: 'upd-slot' }))),
     nav,
@@ -1301,7 +1301,7 @@ function modal({ title, ic, kind, body, foot, wide, size, closable = true, onClo
   return entry;
 }
 
-function confirmDialog(message, { title = 'YTDL Interface', kind = 'warn', yes = T('dlg.yes'), no = T('dlg.no') } = {}) {
+function confirmDialog(message, { title = 'Lasso', kind = 'warn', yes = T('dlg.yes'), no = T('dlg.no') } = {}) {
   return new Promise(resolve => {
     let m;
     const done = v => { resolve(v); m.close(v); };
@@ -1314,7 +1314,7 @@ function confirmDialog(message, { title = 'YTDL Interface', kind = 'warn', yes =
     });
   });
 }
-function alertDialog(message, { title = 'YTDL Interface', kind = '', pre = '' } = {}) {
+function alertDialog(message, { title = 'Lasso', kind = '', pre = '' } = {}) {
   return new Promise(resolve => {
     const m = modal({
       title, ic: kind === 'bad' ? 'alert' : kind === 'ok' ? 'check' : 'info', kind,
@@ -2404,6 +2404,14 @@ function showWhenFree(fn) {   // attend qu'aucune autre fenêtre ne soit ouverte
 }
 
 // Notes de version GitHub (Markdown) en texte lisible.
+// Notes de version : une section par langue, titrée « ## FR · … », « ## EN · … ». On garde
+// celle de la langue de l'interface, sinon l'anglais, sinon le texte entier (anciennes notes).
+function notesFor(md, lang) {
+  const parts = String(md || '').replace(/\r/g, '').split(/^(?=##\s+[A-Z]{2}\s+·)/m);
+  const pick = code => parts.find(p => new RegExp('^##\\s+' + code + '\\s+·').test(p));
+  const part = pick(String(lang || '').slice(0, 2).toUpperCase()) || pick('EN');
+  return part ? part.replace(/^##\s+[A-Z]{2}\s+·\s*/, '## ') : md;
+}
 function plainNotes(md) {
   return String(md || '')
     .replace(/\r/g, '')
@@ -2466,7 +2474,7 @@ function paintUpdate() {
       h('button', { class: 'btn btn--primary', type: 'button', onclick: page }, icon('external'), T('upd.page')));
     return;
   }
-  const notes = plainNotes(u.notes);
+  const notes = plainNotes(notesFor(u.notes, S.lang));
   m.body.replaceChildren(...[head,   // replaceChildren écrirait « null » : on filtre
     u.size && h('p', { class: 'upd__size' }, T('upd.size', { s: humanSize(u.size) })),
     notes && h('div', { class: 'upd__notes' }, h('h3', null, T('upd.notes')), h('div', { class: 'upd__text' }, notes)),

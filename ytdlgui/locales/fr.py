@@ -1,6 +1,6 @@
 # Français
 S = {
-    "app.title": "YTDL Interface : téléchargeur vidéo (yt-dlp)",
+    "app.title": "Lasso : téléchargeur vidéo (yt-dlp)",
     "msg.init": "Initialisation...",
     "lang.auto": "Auto (système)",
     "top.language": "Langue :",
@@ -402,7 +402,7 @@ S = {
     "upd.restart": "Redémarrer maintenant",
     "upd.failed": "La mise à jour a échoué. Rien n'a été modifié ; vous pouvez la télécharger depuis sa page.",
     "upd.manual": "Cette copie ne peut pas se mettre à jour elle-même (lancée depuis les sources ou dossier protégé en écriture) : téléchargez la nouvelle version depuis sa page.",
-    "upd.done": "YTDL Interface a été mis à jour en version {v}.",
+    "upd.done": "Lasso a été mis à jour en version {v}.",
     "upd.none": "Vous avez la dernière version ({v}).",
     "upd.error": "Impossible de vérifier les mises à jour :",
     "upd.checking": "Recherche d'une mise à jour...",
