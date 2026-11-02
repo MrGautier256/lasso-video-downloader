@@ -2404,6 +2404,14 @@ function showWhenFree(fn) {   // attend qu'aucune autre fenêtre ne soit ouverte
 }
 
 // Notes de version GitHub (Markdown) en texte lisible.
+// Notes de version : une section par langue, titrée « ## FR · … », « ## EN · … ». On garde
+// celle de la langue de l'interface, sinon l'anglais, sinon le texte entier (anciennes notes).
+function notesFor(md, lang) {
+  const parts = String(md || '').replace(/\r/g, '').split(/^(?=##\s+[A-Z]{2}\s+·)/m);
+  const pick = code => parts.find(p => new RegExp('^##\\s+' + code + '\\s+·').test(p));
+  const part = pick(String(lang || '').slice(0, 2).toUpperCase()) || pick('EN');
+  return part ? part.replace(/^##\s+[A-Z]{2}\s+·\s*/, '## ') : md;
+}
 function plainNotes(md) {
   return String(md || '')
     .replace(/\r/g, '')
@@ -2466,7 +2474,7 @@ function paintUpdate() {
       h('button', { class: 'btn btn--primary', type: 'button', onclick: page }, icon('external'), T('upd.page')));
     return;
   }
-  const notes = plainNotes(u.notes);
+  const notes = plainNotes(notesFor(u.notes, S.lang));
   m.body.replaceChildren(...[head,   // replaceChildren écrirait « null » : on filtre
     u.size && h('p', { class: 'upd__size' }, T('upd.size', { s: humanSize(u.size) })),
     notes && h('div', { class: 'upd__notes' }, h('h3', null, T('upd.notes')), h('div', { class: 'upd__text' }, notes)),
