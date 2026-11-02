@@ -163,6 +163,14 @@ jobs:
           path: dist
           merge-multiple: true
 
+      # Empreintes des archives : la mise à jour intégrée à l'application (ytdlgui/updater.py)
+      # vérifie l'archive téléchargée avec ce fichier avant de remplacer quoi que ce soit.
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum YTDL-Interface-windows.zip YTDL-Interface-linux.tar.gz > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
       # Si le tag n'existe pas encore (lancement manuel), il est créé ici sur le
       # commit compilé. Un tag créé avec le jeton du workflow ne relance pas ce
       # workflow : pas de double build.
@@ -175,5 +183,6 @@ jobs:
           files: |
             dist/YTDL-Interface-windows.zip
             dist/YTDL-Interface-linux.tar.gz
+            dist/SHA256SUMS.txt
           fail_on_unmatched_files: true
           generate_release_notes: true

@@ -25,7 +25,15 @@ pip install -r requirements.txt
 - **Windows :** double-cliquer sur `main.pyw`. L'interface s'appuie sur WebView2, déjà présent sur Windows 10 et 11.
 - **Linux :** `python3 main.pyw`. pip installe le moteur Qt WebEngine ; le moteur GTK des paquets système (`python3-gi` et `gir1.2-webkit2-4.1` sur Debian/Ubuntu) convient aussi.
 
-Dans les deux cas, si yt-dlp et/ou ffmpeg sont absents de la machine, l'application le détecte au démarrage et propose une fenêtre d'installation avec barre de progression par composant ; l'installation se fait en arrière-plan, sans quitter l'app. Accessible aussi à tout moment depuis la section Avancé ("Télécharger yt-dlp" / "Installer ffmpeg" / "Mettre à jour yt-dlp"), ou en cliquant sur l'état de yt-dlp / ffmpeg en bas du menu. [Deno](https://deno.com), facultatif mais conseillé pour YouTube (yt-dlp s'en sert pour obtenir tous les formats), s'installe de la même façon ("Installer Deno"). Les réglages et les binaires sont enregistrés dans ce même dossier (`settings.json`, `bin/`), à côté de l'exécutable, pas dans un dossier système : gardez le dossier entier ensemble.
+Dans les deux cas, si yt-dlp et/ou ffmpeg sont absents de la machine, l'application le détecte au démarrage et propose une fenêtre d'installation avec barre de progression par composant ; l'installation se fait en arrière-plan, sans quitter l'app. Accessible aussi à tout moment depuis la section Avancé ("Télécharger yt-dlp" / "Installer ffmpeg" / "Mettre à jour yt-dlp"), ou en cliquant sur l'état de yt-dlp / ffmpeg en bas du menu. [Deno](https://deno.com), facultatif mais conseillé pour YouTube (yt-dlp s'en sert pour obtenir tous les formats), est proposé au démarrage s'il manque (bouton "Ne plus proposer" si vous n'en voulez pas), et s'installe aussi depuis Avancé ("Installer Deno"). Les réglages et les binaires sont enregistrés dans ce même dossier (`settings.json`, `bin/`), à côté de l'exécutable, pas dans un dossier système : gardez le dossier entier ensemble.
+
+## Mises à jour
+
+L'application vérifie au démarrage, une fois par jour au plus, si une nouvelle version est publiée sur GitHub. Si c'est le cas, elle le propose avec les nouveautés : **Mettre à jour**, **Plus tard** ou **Ignorer cette version**. Rien ne s'installe sans votre accord.
+
+La mise à jour télécharge l'archive de la nouvelle version, vérifie son empreinte SHA-256, puis redémarre l'application pour remplacer ses fichiers. Vos réglages, `bin/` (yt-dlp, ffmpeg, Deno), `archive.txt` et tout ce que vous avez rangé dans le dossier sont conservés. Le dossier doit être modifiable : dans un dossier protégé (Program Files par exemple) ou lancée depuis les sources, l'application ouvre simplement la page de la nouvelle version.
+
+Réglages dans Avancé > Application : vérification au démarrage (désactivable) et bouton "Rechercher une mise à jour".
 
 ## Langue et thème
 
