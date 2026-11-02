@@ -1978,8 +1978,14 @@ function edZoom(ed, z, clientX) {
   if (!ed.dur) return;
   const { scroll, inner } = ed.ui;
   const sr = scroll.getBoundingClientRect();
-  const x = clientX == null ? sr.left + sr.width / 2 : clientX;
-  const t = clientX == null && ed.zoom === 1 ? ed.V.currentTime : edTimeAtX(ed, x);
+  let x = clientX, t;
+  if (x == null) {   // boutons et clavier : zoom autour de la tête de lecture
+    t = ed.V.currentTime || 0;
+    const px = sr.left + t / ed.dur * inner.clientWidth - scroll.scrollLeft;
+    x = px >= sr.left && px <= sr.right ? px : sr.left + sr.width / 2;
+  } else {
+    t = edTimeAtX(ed, x);
+  }
   ed.zoom = clamp(z, 1, Math.max(1, ed.dur / 10));
   edRenderStatic(ed);
   scroll.scrollLeft = t / ed.dur * inner.clientWidth - (x - sr.left);
