@@ -85,7 +85,8 @@ def route_through_proxy(info, proxy, prefix, renew_url=None):
         fid = str(f.get("format_id") or count)
         renew = (lambda fid=fid: renew_url(fid)) if renew_url else None
         f["url"] = proxy.add("%s/%s" % (prefix, fid),
-                             Target(url, f.get("http_headers"), f.get("cookies"), renew=renew))
+                             Target(url, f.get("http_headers"), f.get("cookies"), renew=renew,
+                                    available_at=f.get("available_at")))
         count += 1
     if count and is_googlevideo(info.get("url")):
         info.pop("url", None)
@@ -94,7 +95,7 @@ def route_through_proxy(info, proxy, prefix, renew_url=None):
 
 def renewer(ytdlp, cfg, url):
     """Fonction qui renouvelle l'URL d'un format expiré (403 en amont) par un nouveau
-    `yt-dlp -J`, en gardant le même format_id."""
+    `yt-dlp -J`, en gardant le même format_id : renvoie (url, en-têtes, available_at)."""
     cache = {}
 
     def renew(fid):
@@ -103,7 +104,7 @@ def renewer(ytdlp, cfg, url):
             cache["at"] = time.time()
         for f in cache["info"].get("formats") or []:
             if str(f.get("format_id")) == fid and f.get("url"):
-                return f["url"], f.get("http_headers") or {}
+                return f["url"], f.get("http_headers") or {}, f.get("available_at")
         return None
     return renew
 

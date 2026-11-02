@@ -22,6 +22,7 @@ import socketserver
 import ssl
 import sys
 import threading
+import time
 import urllib.parse
 
 CHUNK = 10 * 1024 * 1024
@@ -39,12 +40,17 @@ class UpstreamError(Exception):
 class Target:
     """Ce que relaie un chemin du proxy : une URL distante avec ses en-têtes, ou un fichier.
 
-    `renew` (facultatif) renvoie un nouveau couple (url, headers) quand l'URL a expiré
-    (403 ou 410 en amont) ; il n'est appelé qu'une fois par requête.
+    `renew` (facultatif) renvoie un nouveau triplet (url, headers, available_at) quand
+    l'URL a expiré (403 ou 410 en amont) ; il n'est appelé qu'une fois par requête.
+    `available_at` (horodatage, facultatif) : instant à partir duquel l'URL répond. YouTube
+    ne valide certaines URL de flux que quelques secondes après leur extraction (yt-dlp
+    attend lui aussi) ; avant, elles répondent 403.
     """
 
-    def __init__(self, url=None, headers=None, cookies="", path=None, mime=None, renew=None, data=None):
+    def __init__(self, url=None, headers=None, cookies="", path=None, mime=None, renew=None, data=None,
+                 available_at=None):
         self.url = url
+        self.available_at = available_at
         self.headers = dict(headers or {})
         self.cookies = cookies or ""
         self.path = path
@@ -53,6 +59,14 @@ class Target:
         self.renew = renew
         self.size = None
         self.lock = threading.Lock()
+
+
+def _wait_until(available_at, limit=15.0):
+    """Attend que l'URL soit valable (une demi-seconde de marge), sans dépasser `limit`."""
+    if available_at:
+        delay = float(available_at) + 0.5 - time.time()
+        if delay > 0:
+            time.sleep(min(delay, limit))
 
 
 def cookie_header(cookies, host):
@@ -320,7 +334,8 @@ class _Handler(http.server.BaseHTTPRequestHandler):
     def _serve_remote(self, target, head):
         proxy, ipv4 = self.owner.network()
         with target.lock:
-            url, headers = target.url, target.headers
+            url, headers, available_at = target.url, target.headers, target.available_at
+        _wait_until(available_at)
         up = Upstream(url, headers, target.cookies, proxy, ipv4)
         renewed = False
         try:
@@ -337,8 +352,9 @@ class _Handler(http.server.BaseHTTPRequestHandler):
                         fresh = target.renew()
                         if fresh:
                             with target.lock:
-                                target.url, target.headers = fresh
+                                target.url, target.headers, target.available_at = fresh
                             up.close()
+                            _wait_until(fresh[2])
                             up = Upstream(fresh[0], fresh[1], target.cookies, proxy, ipv4)
                             continue
                     if exc.status == 416:
