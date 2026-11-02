@@ -94,6 +94,8 @@ Every option is explained right under its name.
 
 Lasso installs nothing on the system: its settings, its tools (`bin` folder) and its history are kept in its own folder. To uninstall it, delete that folder.
 
+On first launch, Lasso offers to add a shortcut to the Start menu (and so to Windows search) or, on Linux, to the applications menu, with an optional desktop shortcut. These shortcuts are managed in Settings › Advanced › Application. Before deleting the folder, turn them off, or delete them by hand.
+
 ## Code signing policy
 
 Free code signing provided by [SignPath.io](https://about.signpath.io/), certificate by [SignPath Foundation](https://signpath.org/).

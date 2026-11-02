@@ -1011,7 +1011,9 @@ const PAGES = [
     { title: 'adv.cmd', help: 'adv.cmd.help', bare: true, fields: [{ type: 'command' }] },
     { title: 'upd.section', fields: [
       { type: 'appversion' },
-      { type: 'toggle', name: 'update_check', label: 'upd.auto', tip: 'upd.auto.tip' }] },
+      { type: 'toggle', name: 'update_check', label: 'upd.auto', tip: 'upd.auto.tip' },
+      { type: 'shortcut', kind: 'menu' },
+      { type: 'shortcut', kind: 'desktop' }] },
   ] },
 ];
 
@@ -1141,6 +1143,23 @@ function renderField(f) {
     case 'actions':
       return h('div', { class: 'row' }, h('div', { class: 'row__actions' },
         f.buttons.map(b => h('button', { class: 'btn', type: 'button', onclick: b.fn }, icon(b.ic), T(b.label)))));
+    case 'shortcut': {
+      // Raccourcis : leur état vient du disque (S.shortcuts), pas d'un réglage enregistré.
+      if (!S.shortcuts || !S.shortcuts.supported) return h('div');
+      const os = shortcutOs();
+      const sid = 'f-sc-' + f.kind;
+      const inp = h('input', { type: 'checkbox', id: sid, role: 'switch', checked: !!S.shortcuts[f.kind], onchange: async e => {
+        inp.disabled = true;
+        await applyShortcut(f.kind, e.target.checked);
+        inp.checked = !!S.shortcuts[f.kind];
+        inp.disabled = false;
+      } });
+      const tip = f.kind === 'menu' ? T('sc.menu.tip.' + os) : '';
+      return h('label', { class: 'row row--toggle', for: sid },
+        h('div', { class: 'row__text' }, h('span', { class: 'row__label' }, T(f.kind === 'menu' ? 'sc.menu.' + os : 'sc.desktop')),
+          tip ? h('span', { class: 'row__tip' }, tip) : null),
+        h('div', { class: 'row__ctrl' }, h('span', { class: 'switch' }, inp, h('span', { class: 'switch__track' }))));
+    }
     case 'appversion':
       return h('div', { class: 'row' },
         h('div', { class: 'row__text' },
@@ -2398,6 +2417,51 @@ function updateUpdChip() {
     icon('sparkles'), T(u.state === 'ready' ? 'upd.badge.ready' : 'upd.badge', { v: u.version })) : '');
 }
 
+// Raccourcis vers Lasso (menu Démarrer et recherche Windows, ou menu des applications ;
+// Bureau en option) : l'app reste portable, seul un raccourci est ajouté hors de son dossier.
+function shortcutOs() {
+  return S.shortcuts && S.shortcuts.os === 'windows' ? 'win' : 'linux';
+}
+async function applyShortcut(kind, on, { quiet = false } = {}) {
+  const r = await call('set_shortcut', kind, on);
+  if (!r) return false;
+  const err = r.error;
+  delete r.error;
+  S.shortcuts = r;
+  if (err) { toast(T('sc.error', { err }), 'bad', 7000); return false; }
+  if (!quiet) toast(T(on ? 'sc.added' : 'sc.removed'), 'ok');
+  return true;
+}
+// Proposé une fois au démarrage, jamais imposé : « Plus tard » redemande au prochain lancement.
+function openShortcutPrompt() {
+  if (!S.shortcuts.supported || S.shortcuts.menu || !S.settings.shortcut_prompt) return;
+  const os = shortcutOs();
+  const menu = h('input', { type: 'checkbox', class: 'check', id: 'sc-menu', checked: true });
+  const desk = h('input', { type: 'checkbox', class: 'check', id: 'sc-desk' });
+  const opt = (inp, key) => h('label', { class: 'sc-opt', for: inp.id }, inp, h('span', null, T(key)));
+  let m;
+  const add = h('button', { class: 'btn btn--primary', type: 'button', onclick: async () => {
+    add.disabled = true;
+    setSetting('shortcut_prompt', false);
+    let ok = false;
+    for (const [inp, kind] of [[menu, 'menu'], [desk, 'desktop']]) {
+      if (inp.checked && await applyShortcut(kind, true, { quiet: true })) ok = true;
+    }
+    if (ok) toast(T('sc.added'), 'ok');
+    m.close();
+  } }, icon('check'), T('sc.add'));
+  m = modal({
+    title: T('sc.prompt.title.' + os), ic: 'monitor',
+    body: [h('p', { class: 'dialog__msg' }, T('sc.prompt.msg.' + os)),
+      h('div', { class: 'sc-opts' }, opt(menu, 'sc.menu.' + os), opt(desk, 'sc.desktop'))],
+    foot: [
+      h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => { setSetting('shortcut_prompt', false); m.close(); } }, T('inst.never')),
+      h('span', { class: 'spacer' }),
+      h('button', { class: 'btn', type: 'button', onclick: () => m.close() }, T('inst.btn_later')),
+      add],
+  });
+}
+
 function showWhenFree(fn) {   // attend qu'aucune autre fenêtre ne soit ouverte
   if (S.modals.length || S.startupPending) setTimeout(() => showWhenFree(fn), 1500); else fn();
 }
@@ -2674,6 +2738,7 @@ async function boot() {
   S.systemDark = st.system_dark;
   S.preview = st.preview || '';
   S.frozen = !!st.frozen;
+  S.shortcuts = st.shortcuts || { supported: false };
   Object.assign(S.bin, { ytdlp: st.binaries.ytdlp, ffmpeg: st.binaries.ffmpeg, deno: st.binaries.deno, ytdlpPath: st.binaries.ytdlp_path || '', ffmpegPath: st.binaries.ffmpeg_path || '', denoPath: st.binaries.deno_path || '', checking: !!st.binaries.ytdlp });
   S.caps = probeCodecs();
   S.jobs = st.jobs || [];
@@ -2706,6 +2771,9 @@ async function boot() {
   if (startupMissing.length) {
     S.startupPending = true;   // la proposition de mise à jour attend cette fenêtre
     setTimeout(() => { S.startupPending = false; openInstall(startupMissing, { startup: true }); }, 400);
+  }
+  if (S.shortcuts.supported && !S.shortcuts.menu && S.settings.shortcut_prompt) {
+    setTimeout(() => showWhenFree(openShortcutPrompt), 900);   // après la fenêtre d'installation
   }
   if (st.updated) setTimeout(() => toast(T('upd.done', { v: st.updated }), 'ok', 6000), 600);
   if (window.YTDL_AFTER_BOOT) window.YTDL_AFTER_BOOT({ openAnalyze, openInstall, go, toast });

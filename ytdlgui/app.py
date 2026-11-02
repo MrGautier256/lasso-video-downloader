@@ -23,6 +23,7 @@ from . import command as cmdmod
 from . import engine as eng
 from . import i18n
 from . import preview
+from . import shortcuts
 from . import system
 from . import updater
 from .binaries import (
@@ -138,6 +139,7 @@ def default_settings(base_dir):
         "update_check": True,     # vérifier les mises à jour au démarrage
         "update_skip": "",        # version que l'utilisateur a choisi d'ignorer
         "deno_prompt": True,      # proposer Deno au démarrage s'il manque
+        "shortcut_prompt": True,  # proposer le raccourci du menu Démarrer au démarrage
     }
 
 
@@ -219,6 +221,8 @@ class Api:
         if updater.frozen():
             # Reste d'une mise à jour téléchargée mais jamais appliquée (ou échouée)
             threading.Thread(target=updater.clean_staging, daemon=True).start()
+            # Dossier de Lasso déplacé : ses raccourcis suivent
+            threading.Thread(target=shortcuts.repair, daemon=True).start()
 
     # ---------------------------------------------------------- fenêtre
     def _attach(self, window):
@@ -301,6 +305,7 @@ class Api:
             "preset_keys": PRESET_KEYS,
             "system_dark": system.system_prefers_dark(),
             "binaries": self._binaries(ytdlp, ffmpeg),
+            "shortcuts": shortcuts.status(),
             "preview": self._preview(ytdlp, ffmpeg),
             "jobs": self._jobs(),
             "running": self._engine.running,
@@ -342,6 +347,15 @@ class Api:
 
     def update_skip(self, version):
         self.set_setting("update_skip", str(version))
+
+    # ---------------------------------------------------------- raccourcis
+    def set_shortcut(self, kind, on):
+        """Ajoute ou retire le raccourci « menu » (menu Démarrer / des applications) ou
+        « desktop » ; renvoie l'état des raccourcis, avec « error » en cas d'échec."""
+        try:
+            return shortcuts.set_shortcut(kind, bool(on))
+        except Exception as exc:
+            return dict(shortcuts.status(), error=str(exc))
 
     def update_install(self):
         """Télécharge et prépare la nouvelle version, en arrière-plan ; la page suit avec

@@ -94,6 +94,8 @@ Chaque option est expliquée directement sous son nom.
 
 Lasso n'installe rien dans le système : ses réglages, ses outils (dossier `bin`) et son historique sont rangés dans son propre dossier. Pour le désinstaller, supprimez ce dossier.
 
+Au premier lancement, Lasso propose d'ajouter un raccourci au menu Démarrer (et donc à la recherche Windows) ou, sous Linux, au menu des applications, avec en option un raccourci sur le Bureau. Ces raccourcis se gèrent dans Réglages › Avancé › Application. Avant de supprimer le dossier, décochez-les, ou supprimez-les à la main.
+
 ## Politique de signature du code (code signing policy)
 
 Signature du code gratuite fournie par [SignPath.io](https://about.signpath.io/), certificat de la [SignPath Foundation](https://signpath.org/).
