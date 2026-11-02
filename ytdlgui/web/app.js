@@ -2418,6 +2418,7 @@ function plainNotes(md) {
     .replace(/^#+\s*/gm, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/`([^`\n]+)`/g, '$1')
     .replace(/^\s*[*-]\s+/gm, '• ')
     .replace(/ by @\S+ in https:\/\/\S+/g, '')
     .replace(/^\s*Full Changelog\b.*$/gim, '')
