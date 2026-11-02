@@ -25,13 +25,17 @@ import zipfile
 
 from .binaries import CREATE_NO_WINDOW, IS_WINDOWS, app_dir
 
-REPO = "MrGautier256/ytdl-interface"
+# Ancien nom du dépôt : MrGautier256/ytdl-interface (GitHub redirige vers le nouveau).
+REPO = "MrGautier256/lasso-video-downloader"
 # YTDL_UPDATE_URL remplace l'adresse de l'API (tests avec un faux serveur de releases).
 API_URL = os.environ.get("YTDL_UPDATE_URL") or "https://api.github.com/repos/%s/releases/latest" % REPO
-ASSET = "YTDL-Interface-windows.zip" if IS_WINDOWS else "YTDL-Interface-linux.tar.gz"
 SUMS = "SHA256SUMS.txt"
-APP_FOLDER = "YTDL-Interface"           # dossier racine des archives de release
-EXE = APP_FOLDER + (".exe" if IS_WINDOWS else "")
+# L'archive (<nom>-windows.zip, <nom>-linux.tar.gz), son dossier racine et l'exécutable
+# portent le nom de l'application : "Lasso" à partir de la 1.7, "YTDL-Interface" avant.
+# Les deux sont acceptés, le plus récent d'abord, pour franchir le changement de nom.
+NAMES = ("Lasso", "YTDL-Interface")
+ARCHIVE_SUFFIX = "-windows.zip" if IS_WINDOWS else "-linux.tar.gz"
+EXE_SUFFIX = ".exe" if IS_WINDOWS else ""
 STAGING = "_update"
 
 
@@ -46,7 +50,7 @@ def is_newer(latest, current):
 
 
 def _open(url, timeout=20):
-    req = urllib.request.Request(url, headers={"User-Agent": "YTDL-Interface",
+    req = urllib.request.Request(url, headers={"User-Agent": "Lasso",
                                                "Accept": "application/vnd.github+json"})
     return urllib.request.urlopen(req, timeout=timeout)
 
@@ -56,11 +60,13 @@ def latest_release():
     with _open(API_URL) as resp:
         data = json.load(resp)
     assets = {a.get("name"): a for a in data.get("assets") or []}
-    asset = assets.get(ASSET) or {}
+    name = next((n + ARCHIVE_SUFFIX for n in NAMES if n + ARCHIVE_SUFFIX in assets), None)
+    asset = assets.get(name) or {}
     return {
         "version": (data.get("tag_name") or "").lstrip("v"),
         "notes": data.get("body") or "",
         "url": data.get("html_url") or "https://github.com/%s/releases/latest" % REPO,
+        "asset": name,
         "asset_url": asset.get("browser_download_url"),
         "size": asset.get("size"),
         "sums_url": (assets.get(SUMS) or {}).get("browser_download_url"),
@@ -96,12 +102,13 @@ def clean_staging():
 
 def download(info, progress=None):
     """Télécharge, vérifie et extrait la nouvelle version ; renvoie son dossier."""
-    if not info.get("asset_url"):
-        raise RuntimeError("%s absent de la release." % ASSET)
+    name = info.get("asset")
+    if not name or not info.get("asset_url"):
+        raise RuntimeError("Aucune archive %s dans la release." % ARCHIVE_SUFFIX)
     clean_staging()
     stage = staging_dir()
     os.makedirs(stage)
-    archive = os.path.join(stage, ASSET)
+    archive = os.path.join(stage, name)
     digest = hashlib.sha256()
     with _open(info["asset_url"], timeout=60) as resp, open(archive, "wb") as out:
         total = int(resp.headers.get("Content-Length") or info.get("size") or 0)
@@ -119,23 +126,33 @@ def download(info, progress=None):
         with _open(info["sums_url"]) as resp:
             sums = resp.read().decode("utf-8", "replace")
         expected = next((line.split()[0].lower() for line in sums.splitlines()
-                         if line.strip().endswith(ASSET)), None)
+                         if line.split() and line.split()[-1].lstrip("*") == name), None)
         if expected != digest.hexdigest():
             raise RuntimeError("SHA-256 : l'archive téléchargée ne correspond pas à la release.")
     target = os.path.join(stage, "new")
-    if ASSET.endswith(".zip"):
+    if name.endswith(".zip"):
         with zipfile.ZipFile(archive) as zf:
             zf.extractall(target)
     else:
         with tarfile.open(archive, "r:*") as tf:
             tf.extractall(target, filter="data")
     os.remove(archive)
-    root = os.path.join(target, APP_FOLDER)
-    if not os.path.isfile(os.path.join(root, EXE)) or not os.path.isdir(os.path.join(root, "_internal")):
-        raise RuntimeError("Archive inattendue : %s introuvable." % EXE)
+    root = next((os.path.join(target, n) for n in NAMES
+                 if os.path.isfile(os.path.join(target, n, n + EXE_SUFFIX))
+                 and os.path.isdir(os.path.join(target, n, "_internal"))), None)
+    if root is None:
+        raise RuntimeError("Archive inattendue : application introuvable.")
     if progress:
         progress(100.0)
     return root
+
+
+def installed_exe(dst):
+    """Nom de l'exécutable installé : celui qui tourne, sinon le premier trouvé dans dst."""
+    if frozen():
+        return os.path.basename(sys.executable)
+    return next((n + EXE_SUFFIX for n in NAMES if os.path.isfile(os.path.join(dst, n + EXE_SUFFIX))),
+                NAMES[0] + EXE_SUFFIX)
 
 
 _WINDOWS_SCRIPT = r"""@echo off
@@ -144,6 +161,10 @@ set "PID=%~1"
 set "SRC=%~2"
 set "DST=%~3"
 set "STAGE=%~4"
+set "NEWEXE=%~5"
+set "OLDEXE=%~6"
+rem Relancé à la fin : le nouvel exécutable si l'échange réussit, l'ancien sinon.
+set "RUN=%OLDEXE%"
 rem Attend la fermeture de l'application (ping sert de pause : timeout exige une console).
 rem Toujours là après 20 s : on la termine (réglages déjà enregistrés, téléchargements arrêtés).
 set /a WAITED=0
@@ -166,16 +187,21 @@ ping -n 2 127.0.0.1 >nul
 goto rename
 :swap
 move "%SRC%\_internal" "%DST%\_internal" >nul || (ren "%DST%\_internal.old" "_internal" & goto done)
-copy /y "%SRC%\YTDL-Interface.exe" "%DST%\YTDL-Interface.exe" >nul || (rmdir /s /q "%DST%\_internal" & ren "%DST%\_internal.old" "_internal" & goto done)
+copy /y "%SRC%\%NEWEXE%" "%DST%\%NEWEXE%" >nul || (rmdir /s /q "%DST%\_internal" & ren "%DST%\_internal.old" "_internal" & goto done)
+set "RUN=%NEWEXE%"
+rem Changement de nom de l'application (YTDL-Interface -> Lasso) : l'ancien exécutable part.
+if /i not "%OLDEXE%"=="%NEWEXE%" del /f /q "%DST%\%OLDEXE%" 2>nul
 rmdir /s /q "%DST%\_internal.old"
 rmdir /s /q "%STAGE%"
 :done
-start "" "%DST%\YTDL-Interface.exe"
+start "" "%DST%\%RUN%"
 (goto) 2>nul & del "%~f0"
 """
 
 _LINUX_SCRIPT = """#!/bin/sh
-PID="$1"; SRC="$2"; DST="$3"; STAGE="$4"
+PID="$1"; SRC="$2"; DST="$3"; STAGE="$4"; NEW="$5"; OLD="$6"
+# Relancé à la fin : le nouvel exécutable si l'échange réussit, l'ancien sinon.
+RUN="$OLD"
 # Attend la fermeture de l'application. Toujours là après 20 s : on la termine
 # (réglages déjà enregistrés, téléchargements arrêtés).
 n=0
@@ -186,12 +212,17 @@ done
 # Même disque : on déplace (rapide) ; l'ancien _internal n'est supprimé qu'après réussite.
 rm -rf "$DST/_internal.old"
 if mv "$DST/_internal" "$DST/_internal.old" && mv "$SRC/_internal" "$DST/_internal" \\
-   && cp -f "$SRC/YTDL-Interface" "$DST/YTDL-Interface.new" && mv -f "$DST/YTDL-Interface.new" "$DST/YTDL-Interface"; then
+   && cp -f "$SRC/$NEW" "$DST/$NEW.new" && mv -f "$DST/$NEW.new" "$DST/$NEW"; then
+  RUN="$NEW"
+  # Changement de nom de l'application (YTDL-Interface -> Lasso) : l'ancien exécutable part.
+  [ "$OLD" != "$NEW" ] && rm -f "$DST/$OLD"
   rm -rf "$DST/_internal.old" "$STAGE"
-elif [ -d "$DST/_internal.old" ] && [ ! -d "$DST/_internal" ]; then
+elif [ -d "$DST/_internal.old" ]; then
+  # Échec en cours de route : on remet l'ancien _internal, que le nouveau soit déjà là ou non.
+  rm -rf "$DST/_internal" "$DST/$NEW.new"
   mv "$DST/_internal.old" "$DST/_internal"
 fi
-nohup "$DST/YTDL-Interface" >/dev/null 2>&1 &
+nohup "$DST/$RUN" >/dev/null 2>&1 &
 rm -f "$0"
 """
 
@@ -199,11 +230,12 @@ rm -f "$0"
 def launch_swap(new_root):
     """Lance le script de remplacement ; l'application doit se fermer juste après."""
     dst, stage, pid = app_dir(), staging_dir(), str(os.getpid())
+    new_exe = os.path.basename(new_root) + EXE_SUFFIX
     # Le script vit hors de _update/, qu'il supprime une fois le remplacement fait.
     fd, script = tempfile.mkstemp(prefix="ytdl-update-", suffix=".cmd" if IS_WINDOWS else ".sh")
     with os.fdopen(fd, "w", encoding="utf-8", newline="\r\n" if IS_WINDOWS else "\n") as f:
         f.write(_WINDOWS_SCRIPT if IS_WINDOWS else _LINUX_SCRIPT)
-    args = [script, pid, new_root, dst, stage]
+    args = [script, pid, new_root, dst, stage, new_exe, installed_exe(dst)]
     if IS_WINDOWS:
         # Console cachée héritée par robocopy ; nouveau groupe : survit à la fermeture.
         subprocess.Popen(["cmd", "/c"] + args, creationflags=CREATE_NO_WINDOW | 0x00000200,
