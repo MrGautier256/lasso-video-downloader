@@ -144,9 +144,16 @@ set "PID=%~1"
 set "SRC=%~2"
 set "DST=%~3"
 set "STAGE=%~4"
-rem Attend la fermeture de l'application (ping sert de pause : timeout exige une console)
+rem Attend la fermeture de l'application (ping sert de pause : timeout exige une console).
+rem Toujours là après 20 s : on la termine (réglages déjà enregistrés, téléchargements arrêtés).
+set /a WAITED=0
 :wait
-tasklist /FI "PID eq %PID%" 2>nul | find "%PID%" >nul && (ping -n 2 127.0.0.1 >nul & goto wait)
+tasklist /FI "PID eq %PID%" 2>nul | find "%PID%" >nul || goto closed
+set /a WAITED+=1
+if %WAITED% equ 20 taskkill /F /T /PID %PID% >nul 2>&1
+ping -n 2 127.0.0.1 >nul
+goto wait
+:closed
 rem Échange par renommage (même disque : instantané), avec retour arrière en cas d'échec.
 rem Plusieurs essais : un antivirus peut verrouiller le dossier quelques instants.
 rmdir /s /q "%DST%\_internal.old" 2>nul
@@ -169,7 +176,13 @@ start "" "%DST%\YTDL-Interface.exe"
 
 _LINUX_SCRIPT = """#!/bin/sh
 PID="$1"; SRC="$2"; DST="$3"; STAGE="$4"
-while kill -0 "$PID" 2>/dev/null; do sleep 0.5; done
+# Attend la fermeture de l'application. Toujours là après 20 s : on la termine
+# (réglages déjà enregistrés, téléchargements arrêtés).
+n=0
+while kill -0 "$PID" 2>/dev/null; do
+  n=$((n + 1)); [ "$n" -eq 40 ] && kill -9 "$PID" 2>/dev/null
+  sleep 0.5
+done
 # Même disque : on déplace (rapide) ; l'ancien _internal n'est supprimé qu'après réussite.
 rm -rf "$DST/_internal.old"
 if mv "$DST/_internal" "$DST/_internal.old" && mv "$SRC/_internal" "$DST/_internal" \\

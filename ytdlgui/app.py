@@ -916,3 +916,8 @@ def run():
     # Windows (WinForms) lit un .ico ; GTK et Qt, un .png
     icon = resource_path("assets", "icon.ico" if os.name == "nt" else "icon.png")
     webview.start(http_server=True, icon=icon if os.path.isfile(icon) else None)
+    # Fenêtre fermée et réglages enregistrés (_on_closing) : on termine sans attendre les
+    # threads de pywebview. Sous Qt, un appel JS qui ferme la fenêtre (quit, update_restart)
+    # garde son thread, non daemon, bloqué pour toujours sur l'envoi de sa réponse à la page :
+    # Python ne quitterait jamais, et le script de mise à jour attend la fin de ce process.
+    os._exit(0)
