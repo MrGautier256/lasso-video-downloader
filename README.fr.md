@@ -38,7 +38,7 @@ Réglages dans Avancé > Application : vérification au démarrage (désactivabl
 ## Langue et thème
 
 En bas du menu latéral :
-- **Thème** : l'interface suit le design system Cosmic (fond spatial, accents néon violets) en sombre, avec une variante claire. "Auto" (icône d'écran) suit le thème du système : celui de Windows (barre de titre comprise, aux couleurs de l'interface sous Windows 11), ou sous Linux le réglage clair/sombre de GNOME et des bureaux compatibles.
+- **Thème** : l'interface suit le design system Clay (crème chaude et terracotta, pointillés pour ce qui n'a pas encore commencé) en clair, avec une variante sombre chaude. "Auto" (icône d'écran) suit le thème du système : celui de Windows (barre de titre comprise, aux couleurs de l'interface sous Windows 11), ou sous Linux le réglage clair/sombre de GNOME et des bureaux compatibles.
 - **Langue** : 9 langues disponibles (français, anglais, espagnol, allemand, italien, portugais, néerlandais, polonais, russe), appliquées sans redémarrer. "Auto" suit la langue du système (langue de Windows, ou variables `LANGUAGE` / `LANG` sous Linux).
 
 ## Utilisation rapide
@@ -93,4 +93,4 @@ Au premier lancement, l'application télécharge pour son propre fonctionnement 
 - [ffmpeg](https://github.com/BtbN/FFmpeg-Builds) (build GPL de BtbN)
 - [Deno](https://github.com/denoland/deno) (licence MIT), facultatif, à la demande
 
-L'interface utilise [pywebview](https://github.com/r0x0r/pywebview) (licence BSD), les polices [Audiowide](https://fonts.google.com/specimen/Audiowide) et [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (licence SIL Open Font, embarquées dans `ytdlgui/web/fonts/`) des tracés d'icônes [Lucide](https://lucide.dev) (licence ISC) et [hls.js](https://github.com/video-dev/hls.js) (licence Apache 2.0, embarqué dans `ytdlgui/web/vendor/`) pour l'aperçu de l'éditeur de passages. Son style suit le design system Cosmic d'Open Design.
+L'interface utilise [pywebview](https://github.com/r0x0r/pywebview) (licence BSD), les polices [Inter](https://rsms.me/inter/) et [JetBrains Mono](https://www.jetbrains.com/lp/mono/) (licence SIL Open Font, embarquées dans `ytdlgui/web/fonts/`) des tracés d'icônes [Lucide](https://lucide.dev) (licence ISC) et [hls.js](https://github.com/video-dev/hls.js) (licence Apache 2.0, embarqué dans `ytdlgui/web/vendor/`) pour l'aperçu de l'éditeur de passages. Son style suit le design system Clay d'Open Design.

@@ -9,8 +9,8 @@ IS_WINDOWS = os.name == "nt"
 # Couleurs de la barre de titre Windows, identiques au fond de fenêtre (--bg dans
 # web/app.css) : la barre se fond dans l'interface au lieu de rester grise/blanche.
 TITLEBAR = {
-    "dark": dict(caption="#0b0b1a", text="#f8f7ff", border="#26263e"),
-    "light": dict(caption="#efecfb", text="#111126", border="#d9d4f0"),
+    "dark": dict(caption="#1c1612", text="#f4e9df", border="#382c24"),
+    "light": dict(caption="#f7eee6", text="#2b211c", border="#dac8b9"),
 }
 
 
