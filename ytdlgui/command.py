@@ -162,6 +162,14 @@ def format_args(cfg, clip=None):
         vc = cfg.get("vcodec", "auto").strip()
         if vc and vc != "auto":
             sort.append("vcodec:%s" % vc)
+        elif cfg.get("container", "auto").strip() == "mp4":
+            # MP4 est choisi pour être lu partout : à résolution égale, image H.264 et son
+            # AAC plutôt que VP9, AV1 ou Opus, qui dans un MP4 saccadent ou ne se lisent
+            # pas sur bien des lecteurs, TV et décodeurs matériels. La résolution reste
+            # prioritaire ; la langue d'origine du son aussi (pistes AAC dans chaque langue).
+            if not res:
+                sort.insert(0, "res")
+            sort += ["vcodec:h264", "acodec:aac"]
         if sort:
             args += ["-S", ",".join(sort)]
     return args
