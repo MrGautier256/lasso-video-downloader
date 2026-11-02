@@ -16,14 +16,17 @@ import threading
 import webview
 
 from . import __version__
+from . import clips
 from . import command as cmdmod
 from . import engine as eng
 from . import i18n
+from . import preview
 from . import system
 from .binaries import (
-    CREATE_NO_WINDOW, app_dir, download_ffmpeg, download_ytdlp, find_ffmpeg, find_ytdlp,
-    format_command, get_version, open_folder, resource_path,
+    CREATE_NO_WINDOW, app_dir, download_deno, download_ffmpeg, download_ytdlp, find_deno,
+    find_ffmpeg, find_ytdlp, format_command, get_version, open_folder, resource_path,
 )
+from .streamproxy import StreamProxy
 from .config import load_settings, save_settings
 from .i18n import T
 
@@ -196,6 +199,10 @@ class Api:
         self._force_close = False
         self._window = None
         self._hwnd = None
+        # Proxy local (aperçu et passages YouTube) et sessions d'aperçu de l'éditeur
+        self._proxy = StreamProxy(network=self._network)
+        self._previews = preview.Previews(self._proxy, self._push, self._paths, self._cfg)
+        threading.Thread(target=clips.purge_stale_dirs, daemon=True).start()
 
     # ---------------------------------------------------------- fenêtre
     def _attach(self, window):
@@ -216,13 +223,18 @@ class Api:
             # question ; "Oui" rappelle quit(). Fermeture annulée en attendant.
             self._push({"type": "confirm_quit"})
             return False
-        self._engine.cancel_all()
+        self._shutdown()
         self._save(with_geometry=True)
         return True
 
+    def _shutdown(self):
+        self._engine.cancel_all()
+        self._previews.close_all()
+        self._proxy.stop()
+
     def quit(self):
         self._force_close = True
-        self._engine.cancel_all()
+        self._shutdown()
         if self._window is not None:
             self._window.destroy()
 
@@ -271,10 +283,26 @@ class Api:
         with self._lock:
             return find_ytdlp(self._settings["ytdlp_path"]), find_ffmpeg(self._settings["ffmpeg_path"])
 
+    def _cfg(self):
+        """Copie des réglages pour construire une commande, avec le chemin de Deno."""
+        with self._lock:
+            cfg = dict(self._settings)
+        cfg["_deno"] = find_deno() or ""
+        return cfg
+
+    def _network(self):
+        """(proxy HTTP(S) de l'utilisateur ou "", forcer l'IPv4) pour le proxy local."""
+        with self._lock:
+            proxy, ipv4 = self._settings["proxy"].strip(), self._settings["force_ipv4"]
+        if not proxy.lower().startswith(("http://", "https://")):
+            proxy = ""
+        return proxy, ipv4
+
     @staticmethod
     def _binaries(ytdlp, ffmpeg):
-        return {"ytdlp": bool(ytdlp), "ffmpeg": bool(ffmpeg),
-                "ytdlp_path": ytdlp or "", "ffmpeg_path": ffmpeg or ""}
+        deno = find_deno()
+        return {"ytdlp": bool(ytdlp), "ffmpeg": bool(ffmpeg), "deno": bool(deno),
+                "ytdlp_path": ytdlp or "", "ffmpeg_path": ffmpeg or "", "deno_path": deno or ""}
 
     def _check_version(self, ytdlp):
         if ytdlp:
@@ -327,8 +355,7 @@ class Api:
         return {"strings": i18n.strings(), "lang": i18n.get_lang()}
 
     def _preview(self, ytdlp, ffmpeg):
-        with self._lock:
-            cfg = dict(self._settings)
+        cfg = self._cfg()
         try:
             return format_command(cmdmod.build_command(cfg, "<URL>", ytdlp or "yt-dlp", ffmpeg))
         except Exception as exc:
@@ -359,7 +386,7 @@ class Api:
     def _job_dict(self, job):
         return {"id": job.id, "url": job.url, "title": job.title, "status": job.status,
                 "percent": job.percent, "speed": job.speed, "eta": job.eta,
-                "item": job.item, "size": job.size}
+                "item": job.item, "size": job.size, "clip": job.clip, "phase": job.phase}
 
     def _jobs(self):
         engine = self._engine
@@ -375,17 +402,14 @@ class Api:
         ytdlp, ffmpeg = self._paths()
         if not ytdlp:
             return {"need": "ytdlp"}
-        with self._lock:
-            cfg = dict(self._settings)
+        cfg = self._cfg()
         if not ffmpeg and not force and cmdmod.needs_ffmpeg(cfg):
             return {"need": "ffmpeg"}
-        dest = cfg.get("dest_dir", "").strip()
-        if dest:
-            try:
-                os.makedirs(dest, exist_ok=True)
-            except OSError:
-                return {"error": "%s\n%s" % (T("msg.nodest"), dest)}
-        pending = {j.url for j in self._engine.jobs.values() if j.status not in eng.FINAL_STATES}
+        dest, error = self._dest(cfg)
+        if error:
+            return error
+        pending = {j.url for j in self._engine.jobs.values()
+                   if j.status not in eng.FINAL_STATES and not j.clip}
         added = skipped = 0
         for url in urls:
             url = str(url).strip()
@@ -400,6 +424,143 @@ class Api:
         if start and added:
             self._start()
         return self._queue_state(added=added, skipped=skipped)
+
+    def _dest(self, cfg):
+        dest = cfg.get("dest_dir", "").strip()
+        if dest:
+            try:
+                os.makedirs(dest, exist_ok=True)
+            except OSError:
+                return dest, {"error": "%s\n%s" % (T("msg.nodest"), dest)}
+        return dest, None
+
+    # ---------------------------------------------------------- passages
+    @staticmethod
+    def _clean_clip(clip):
+        """Passages venus de la page, revalidés ici : liste de [début, fin] en secondes."""
+        try:
+            sections = cmdmod.normalize_sections(
+                [float(a), float(b)] for a, b in (clip or {}).get("sections") or [])
+        except (TypeError, ValueError):
+            return None
+        if not sections or sections[0][0] < 0:
+            return None
+        return {"sections": sections, "precise": bool(clip.get("precise")),
+                "merge": bool(clip.get("merge")) and len(sections) > 1}
+
+    def add_clip(self, url, clip, start):
+        """Ajoute une tâche qui ne télécharge que les passages choisis dans l'éditeur."""
+        clip = self._clean_clip(clip)
+        if clip is None:
+            return {"error": T("ed.order")}
+        ytdlp, ffmpeg = self._paths()
+        if not ytdlp:
+            return {"need": "ytdlp"}
+        if not ffmpeg:
+            return {"need": "ffmpeg", "required": True}   # --download-sections passe par ffmpeg
+        dest, error = self._dest(self._cfg())
+        if error:
+            return error
+        for job in self._engine.jobs.values():
+            if (job.status not in eng.FINAL_STATES and job.url == url and job.clip
+                    and job.clip["sections"] == clip["sections"]):
+                return self._queue_state(added=0, skipped=1)
+        self._add_clip_job(url, clip, dest)
+        if start:
+            self._start()
+        return self._queue_state(added=1, skipped=0)
+
+    def set_job_clip(self, job_id, clip):
+        """Change les passages d'une tâche pas encore lancée, finie ou en erreur."""
+        clip = self._clean_clip(clip)
+        job = self._engine.jobs.get(int(job_id))
+        if clip is None or job is None or job.status == eng.ST_RUNNING:
+            return self._queue_state()
+        if job.status == eng.ST_PENDING:
+            # Une tâche ordinaire en attente devient une tâche à passages : sa commande
+            # sera construite à son lancement, par _prepare_clip.
+            job.clip = clip
+            job.part_total = len(clip["sections"])
+            job.prepare = self._prepare_clip
+            job.cleanup = self._cleanup_clip
+            job.finish = self._finish_clip if clip["merge"] else None
+        elif self._engine.remove(job.id):
+            self._add_clip_job(job.url, clip, job.dest_dir)
+        return self._queue_state()
+
+    def _add_clip_job(self, url, clip, dest):
+        return self._engine.add_job(
+            url, None, dest, clip=clip, prepare=self._prepare_clip,
+            finish=self._finish_clip if clip["merge"] else None, cleanup=self._cleanup_clip)
+
+    def _prepare_clip(self, job):
+        """Juste avant le lancement : résout la vidéo, fait passer les flux YouTube par le
+        proxy local (cf. ytdlgui/clips.py) et construit la commande."""
+        ytdlp, ffmpeg = self._paths()
+        if not ytdlp:
+            raise RuntimeError(T("msg.ytdlpnotfound"))
+        cfg = self._cfg()
+        job.work_dir = clips.make_work_dir(clips.CLIP_PREFIX)
+        try:
+            info = clips.resolve(ytdlp, cfg, job.url, on_proc=lambda p: setattr(job, "proc", p))
+            clips.check_clippable(info)
+        except clips.ClipError as exc:
+            raise RuntimeError(T(exc.key) if exc.key else exc.detail)
+        job.title = info.get("title") or job.url
+        self._q.put(("title", job.id))
+        info_json = None
+        proxy, _ = self._network()
+        socks = cfg.get("proxy", "").strip() and not proxy
+        if not socks and clips.route_through_proxy(info, self._proxy, "c%d" % job.id,
+                                                    clips.renewer(ytdlp, cfg, job.url)):
+            info_json = os.path.join(job.work_dir, "info.json")
+            with open(info_json, "w", encoding="utf-8") as f:
+                jsonmod.dump(info, f)
+        extra = []
+        if job.finish is not None:
+            job.parts_file = os.path.join(job.work_dir, "parts.txt")
+            extra = ["--print-to-file", "after_move:filepath", job.parts_file]
+        return cmdmod.build_command(cfg, job.url, ytdlp, ffmpeg, clip=job.clip,
+                                    info_json=info_json, extra_args=extra)
+
+    def _finish_clip(self, job):
+        """Fusion des passages en un seul fichier (option de l'éditeur)."""
+        try:
+            with open(job.parts_file, encoding="utf-8") as f:
+                parts = [line.strip() for line in f if line.strip() and os.path.isfile(line.strip())]
+        except (OSError, AttributeError):
+            return 0
+        if len(parts) < 2:
+            return 0
+        _, ffmpeg = self._paths()
+        output = clips.merged_name(parts[0], T("clip.merged"))
+        rc, message = clips.concat(ffmpeg, parts, output, on_proc=lambda p: setattr(job, "proc", p))
+        if rc == 0:
+            for part in parts:
+                try:
+                    os.remove(part)
+                except OSError:
+                    pass
+            job.title = os.path.basename(output)
+            self._q.put(("title", job.id))
+        elif message:
+            self._q.put(("log", job.id, message))
+        return rc
+
+    def _cleanup_clip(self, job):
+        self._proxy.remove_prefix("c%d/" % job.id)
+        clips.remove_work_dir(job.work_dir)
+        job.work_dir = None
+
+    # ---------------------------------------------------------- aperçu (éditeur de passages)
+    def preview_open(self, url, caps):
+        return self._previews.open(str(url).strip(), caps or {})
+
+    def preview_local(self, sid, caps):
+        return self._previews.local(sid, caps or {})
+
+    def preview_close(self, sid):
+        self._previews.close(sid)
 
     def _start(self):
         with self._lock:
@@ -441,16 +602,18 @@ class Api:
         ytdlp, ffmpeg = self._paths()
         if not ytdlp:
             return {"need": "ytdlp"}
-        with self._lock:
-            cfg = dict(self._settings)
+        cfg = self._cfg()
         restart = False
         for jid in ids:
             job = self._engine.jobs.get(int(jid))
             if job is None or job.status not in eng.FINAL_STATES:
                 continue
             if self._engine.remove(job.id):
-                self._engine.add_job(job.url, cmdmod.build_command(cfg, job.url, ytdlp, ffmpeg),
-                                     cfg.get("dest_dir", ""))
+                if job.clip:   # une relance garde les passages de la tâche
+                    self._add_clip_job(job.url, job.clip, cfg.get("dest_dir", ""))
+                else:
+                    self._engine.add_job(job.url, cmdmod.build_command(cfg, job.url, ytdlp, ffmpeg),
+                                         cfg.get("dest_dir", ""))
                 restart = True
         if restart and not self._engine.running:
             self._start()
@@ -532,6 +695,11 @@ class Api:
             try:
                 if comp == "ytdlp":
                     download_ytdlp(progress)
+                elif comp == "deno":
+                    download_deno(
+                        progress_cb=progress,
+                        status_cb=lambda phase, comp=comp: self._push(
+                            {"type": "install_status", "comp": comp, "phase": phase}))
                 else:
                     download_ffmpeg(
                         progress_cb=progress,
@@ -570,8 +738,7 @@ class Api:
         ytdlp, _ = self._paths()
         if not ytdlp:
             return {"need": "ytdlp"}
-        with self._lock:
-            cfg = dict(self._settings)
+        cfg = self._cfg()
         cmd = [ytdlp, "-J", "--no-warnings"]
         if cfg.get("playlist_mode") == "full":
             cmd += ["--yes-playlist", "--flat-playlist"]

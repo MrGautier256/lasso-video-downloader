@@ -15,6 +15,7 @@ EXE_SUFFIX = ".exe" if IS_WINDOWS else ""
 YTDLP_NAME = "yt-dlp" + EXE_SUFFIX
 FFMPEG_NAME = "ffmpeg" + EXE_SUFFIX
 FFPROBE_NAME = "ffprobe" + EXE_SUFFIX
+DENO_NAME = "deno" + EXE_SUFFIX
 
 _ARM64 = platform.machine().lower() in ("aarch64", "arm64")
 
@@ -26,15 +27,21 @@ _GH_YTDLP = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/"
 # certificats est mal servie et rejetée par le module ssl de Python malgré un
 # certificat valide côté Windows/curl). Zip sous Windows, tar.xz sous Linux.
 _GH_FFMPEG = "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/"
+# Deno (licence MIT) : moteur JavaScript dont yt-dlp a besoin pour résoudre les défis de
+# YouTube ; sans lui, yt-dlp n'obtient qu'une partie des formats. Facultatif.
+_GH_DENO = "https://github.com/denoland/deno/releases/latest/download/"
 if IS_WINDOWS:
     YTDLP_RELEASE_URL = _GH_YTDLP + "yt-dlp.exe"
     FFMPEG_RELEASE_URL = _GH_FFMPEG + "ffmpeg-master-latest-win64-gpl.zip"
+    DENO_RELEASE_URL = _GH_DENO + "deno-x86_64-pc-windows-msvc.zip"
 elif _ARM64:
     YTDLP_RELEASE_URL = _GH_YTDLP + "yt-dlp_linux_aarch64"
     FFMPEG_RELEASE_URL = _GH_FFMPEG + "ffmpeg-master-latest-linuxarm64-gpl.tar.xz"
+    DENO_RELEASE_URL = _GH_DENO + "deno-aarch64-unknown-linux-gnu.zip"
 else:
     YTDLP_RELEASE_URL = _GH_YTDLP + "yt-dlp_linux"
     FFMPEG_RELEASE_URL = _GH_FFMPEG + "ffmpeg-master-latest-linux64-gpl.tar.xz"
+    DENO_RELEASE_URL = _GH_DENO + "deno-x86_64-unknown-linux-gnu.zip"
 
 
 def app_dir():
@@ -86,6 +93,14 @@ def find_ffmpeg(custom_path=""):
     if os.path.isfile(local):
         return local
     return shutil.which("ffmpeg")
+
+
+def find_deno():
+    """Deno de bin/, sinon du PATH (yt-dlp trouve aussi ce dernier tout seul)."""
+    local = os.path.join(bin_dir(), DENO_NAME)
+    if os.path.isfile(local):
+        return local
+    return shutil.which("deno")
 
 
 def _make_executable(path):
@@ -192,6 +207,45 @@ def download_ffmpeg(progress_cb=None, status_cb=None):
     if progress_cb:
         progress_cb(100.0)
     return os.path.join(dest_dir, FFMPEG_NAME)
+
+
+def download_deno(progress_cb=None, status_cb=None):
+    """Télécharge Deno dans bin/ (archive zip contenant le seul exécutable).
+
+    Même découpage de la progression que download_ffmpeg : 0-90 % téléchargement,
+    puis extraction."""
+    dest_dir = bin_dir()
+    tmp_archive = os.path.join(dest_dir, "deno_download.part")
+
+    def hook(blocks, bsize, total):
+        if progress_cb and total > 0:
+            progress_cb(min(100.0, blocks * bsize * 100.0 / total) * 0.9)
+
+    out_path = os.path.join(dest_dir, DENO_NAME)
+    try:
+        urllib.request.urlretrieve(DENO_RELEASE_URL, tmp_archive, reporthook=hook)
+        if status_cb:
+            status_cb("extracting")
+        for norm, src in _iter_archive(tmp_archive):
+            if norm.rsplit("/", 1)[-1] != DENO_NAME:
+                continue
+            tmp_out = out_path + ".part"
+            with open(tmp_out, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+            _make_executable(tmp_out)
+            os.replace(tmp_out, out_path)
+            break
+        else:
+            raise RuntimeError("%s introuvable dans l'archive téléchargée." % DENO_NAME)
+    finally:
+        if os.path.isfile(tmp_archive):
+            try:
+                os.remove(tmp_archive)
+            except OSError:
+                pass
+    if progress_cb:
+        progress_cb(100.0)
+    return out_path
 
 
 def get_version(ytdlp_path):
