@@ -25,7 +25,15 @@ pip install -r requirements.txt
 - **Windows:** double-click `main.pyw`. The interface relies on WebView2, already present on Windows 10 and 11.
 - **Linux:** `python3 main.pyw`. pip installs the Qt WebEngine backend; the GTK backend from system packages (`python3-gi` and `gir1.2-webkit2-4.1` on Debian/Ubuntu) works too.
 
-Either way, if yt-dlp and/or ffmpeg are missing on the machine, the app detects it on startup and offers an install window with a per-component progress bar; installation runs in the background without closing the app. Also reachable any time from the Advanced section ("Download yt-dlp" / "Install ffmpeg" / "Update yt-dlp"), or by clicking the yt-dlp / ffmpeg status at the bottom of the menu. [Deno](https://deno.com), optional but recommended for YouTube (yt-dlp uses it to get every format), installs the same way ("Install Deno"). Settings and binaries are stored inside that same folder (`settings.json`, `bin/`), next to the executable, not in a system directory — keep the whole folder together.
+Either way, if yt-dlp and/or ffmpeg are missing on the machine, the app detects it on startup and offers an install window with a per-component progress bar; installation runs in the background without closing the app. Also reachable any time from the Advanced section ("Download yt-dlp" / "Install ffmpeg" / "Update yt-dlp"), or by clicking the yt-dlp / ffmpeg status at the bottom of the menu. [Deno](https://deno.com), optional but recommended for YouTube (yt-dlp uses it to get every format), is suggested at startup when it's missing ("Don't suggest again" if you don't want it), and can also be installed from Advanced ("Install Deno"). Settings and binaries are stored inside that same folder (`settings.json`, `bin/`), next to the executable, not in a system directory — keep the whole folder together.
+
+## Updates
+
+At startup, at most once a day, the app checks whether a new version is published on GitHub. If so, it offers it with the release notes: **Update**, **Later** or **Skip this version**. Nothing is installed without your approval.
+
+The update downloads the new version's archive, checks its SHA-256 checksum, then restarts the app to replace its files. Your settings, `bin/` (yt-dlp, ffmpeg, Deno), `archive.txt` and anything else you keep in the folder are preserved. The folder must be writable: in a protected folder (such as Program Files) or when run from source, the app just opens the new version's page.
+
+Settings in Advanced > Application: startup check (can be turned off) and a "Check for updates" button.
 
 ## Language and theme
 
