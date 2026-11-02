@@ -43,17 +43,17 @@ At the bottom of the side menu:
 
 ## Quick start
 
-1. Paste one or more links (one per line) in the **Download** section: Paste button, Ctrl+V anywhere on the page, or drag and drop a link from your browser.
+1. Paste one or more links (one per line) in the **Download** section: Paste button, Ctrl+V anywhere on the page, or drag and drop a link from your browser. Each link shows up under the field with its thumbnail, title and duration (for a playlist: its title, number of videos and their total duration), and its own Analyze, Cut and Remove buttons.
 2. Pick a preset in one click (Best, 1080p, 720p, MP3, M4A) or fine-tune in the settings. The summary under the links shows what will be applied (format, subtitles, playlist, simulation...); clicking a tag opens the matching setting.
 3. Click **Download** (or Ctrl+Enter). The queue shows thumbnail (YouTube), progress, speed, time remaining and size.
 
 In the queue: click to select (Ctrl/Shift + click for several), right-click to retry, cancel, copy the link or reorder, Delete to remove the selection, double-click to open the folder.
 
-The **Analyze video** button shows title, duration, thumbnail and the full list of available formats (filterable video / audio); you can manually pick a specific video format + audio format from there.
+A link's **Analyze** button shows title, duration, thumbnail and the full list of available formats (filterable video / audio); you can manually pick a specific video format + audio format from there. On a playlist, it lists its videos with their duration.
 
 ## Cut before downloading
 
-To keep only one part of a video (or several), click **Cut…** next to the links: the option is optional, normal downloads don't depend on it. The same editor opens from the analysis window ("Preview and cut") and from a queue row that hasn't started yet (scissors icon).
+To keep only one part of a video (or several), click the link's scissors under the field (greyed out for a playlist or a live stream in progress): the option is optional, normal downloads don't depend on it. The same editor opens from the analysis window ("Preview and cut") and from a queue row that hasn't started yet (scissors icon).
 
 - The editor prepares a preview, up to 720p, played right in the app. If direct playback isn't possible, it creates a local 720p preview (automatically for videos under 30 minutes).
 - The timeline shows the video's thumbnails, its chapters and, on YouTube, the most replayed moments. Drag the part handles, or set start and end at the playhead with **I** and **O**; **N** adds a part, **Space** plays or pauses, **,** and **.** step frame by frame (all shortcuts: keyboard button in the editor).

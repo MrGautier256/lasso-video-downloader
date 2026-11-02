@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Cut…",
     "dl.cut.tip": "Opens a preview of the link under the cursor to pick\nthe part(s) to download.",
+    "dl.link.loading": "Fetching info…",
+    "dl.link.error": "Info unavailable",
+    "dl.link.playlist": "Playlist",
+    "dl.link.videos": "{n} video(s)",
+    "dl.link.live": "Live",
+    "dl.link.upcoming": "Upcoming live stream",
     "an.cut": "Preview and cut",
     "menu.cut": "Cut…",
     "job.parts": "{n} part(s) · {d}",
