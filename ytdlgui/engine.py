@@ -26,17 +26,40 @@ RE_ITEM = re.compile(r"\[download\][^\S\n]*Downloading item (\d+) of (\d+)")
 RE_DEST = re.compile(r"\[(?:download|ExtractAudio)\] Destination: (.+)")
 RE_MERGE = re.compile(r'\[Merger\] Merging formats into "(.+)"')
 RE_ALREADY = re.compile(r"\[download\] (.+) has already been downloaded")
+# Tâches à passages : yt-dlp annonce le nombre de plages, puis ffmpeg (--download-sections)
+# écrit ses statistiques au lieu des lignes "[download] x%".
+RE_RANGES = re.compile(r"\[info\] .*: Downloading (\d+) time ranges?")
+RE_FFTIME = re.compile(r"time=\s*(\d+):(\d\d):(\d\d(?:\.\d+)?)")
+RE_FFSPEED = re.compile(r"speed=\s*([\d.]+x)")
+RE_FFSIZE = re.compile(r"\b(?:L?size)=\s*(\d+(?:\.\d+)?\s*[KMG]i?B)")
+
+PHASE_PREPARE = "prepare"
+PHASE_DOWNLOAD = "download"
+PHASE_MERGE = "merge"
 
 
 class Job:
     _next_id = 1
 
-    def __init__(self, url, cmd, dest_dir):
+    def __init__(self, url, cmd, dest_dir, clip=None, prepare=None, finish=None, cleanup=None):
         self.id = Job._next_id
         Job._next_id += 1
         self.url = url
         self.cmd = cmd
         self.dest_dir = dest_dir
+        # Passages ({"sections": [[début, fin], ...], "precise", "merge"}) ou None.
+        # prepare(job) -> commande, appelée juste avant le lancement (dans le thread de
+        # la tâche) ; finish(job) -> code retour, appelée après un succès de yt-dlp.
+        # Toutes deux peuvent lancer un processus : elles le rangent dans job.proc pour
+        # que l'annulation le tue.
+        self.clip = clip
+        self.prepare = prepare
+        self.finish = finish
+        self.phase = ""
+        self.part_index = 0
+        self.part_total = len(clip["sections"]) if clip else 0
+        self.work_dir = None
+        self.cleanup = cleanup     # cleanup(job), appelée une fois la tâche finie
         self.title = url
         self.status = ST_PENDING
         self.percent = 0.0
@@ -68,8 +91,8 @@ class Engine:
     def _post(self, *event):
         self.ui_queue.put(event)
 
-    def add_job(self, url, cmd, dest_dir):
-        job = Job(url, cmd, dest_dir)
+    def add_job(self, url, cmd, dest_dir, clip=None, prepare=None, finish=None, cleanup=None):
+        job = Job(url, cmd, dest_dir, clip, prepare, finish, cleanup)
         with self.lock:
             self.jobs[job.id] = job
             self.order.append(job.id)
@@ -104,6 +127,21 @@ class Engine:
             threading.Thread(target=self._run, args=(job,), daemon=True).start()
 
     def _run(self, job):
+        if job.prepare is not None:
+            job.phase = PHASE_PREPARE
+            self._post("status", job.id)
+            try:
+                job.cmd = job.prepare(job)
+            except Exception as exc:
+                if not job.cancelled:
+                    self._post("log", job.id, str(exc))
+                self._finish(job, -1)
+                return
+            if job.cancelled:
+                self._finish(job, -1)
+                return
+        job.phase = PHASE_DOWNLOAD
+        job.part_index = 0
         try:
             job.proc = subprocess.Popen(
                 job.cmd,
@@ -116,11 +154,8 @@ class Engine:
                 start_new_session=not IS_WINDOWS,
             )
         except Exception as exc:
-            job.status = ST_ERROR
             self._post("log", job.id, "Impossible de lancer yt-dlp : %s" % exc)
-            self._post("status", job.id)
-            self._post("done", job.id, -1)
-            self._fill_slots()
+            self._finish(job, -1)
             return
 
         try:
@@ -135,6 +170,18 @@ class Engine:
             self._post("log", job.id, "Erreur de lecture de la sortie de yt-dlp : %s" % exc)
 
         rc = job.proc.wait()
+        if rc in (0, 101) and job.finish is not None and not job.cancelled:
+            job.phase = PHASE_MERGE
+            job.speed = job.eta = ""
+            self._post("status", job.id)
+            try:
+                rc = job.finish(job)
+            except Exception as exc:
+                self._post("log", job.id, str(exc))
+                rc = -1
+        self._finish(job, rc)
+
+    def _finish(self, job, rc):
         if job.cancelled:
             job.status = ST_CANCELLED
         elif rc == 0 or rc == 101:  # 101 = --max-downloads atteint
@@ -144,11 +191,19 @@ class Engine:
             job.eta = ""
         else:
             job.status = ST_ERROR
+        job.phase = ""
+        if job.cleanup is not None:
+            try:
+                job.cleanup(job)
+            except Exception:
+                pass
         self._post("status", job.id)
         self._post("done", job.id, rc)
         self._fill_slots()
 
     def _parse_line(self, job, line):
+        if job.clip and self._parse_clip_line(job, line):
+            return
         m = RE_PROGRESS.match(line)
         if m:
             try:
@@ -169,6 +224,43 @@ class Engine:
         if m:
             job.title = os.path.basename(m.group(1).strip())
             self._post("title", job.id)
+
+    def _parse_clip_line(self, job, line):
+        """Progression d'une tâche à passages : (passages finis + avancée de celui en
+        cours d'après le time= de ffmpeg) / nombre de passages."""
+        sections = job.clip["sections"]
+        m = RE_RANGES.search(line)
+        if m:
+            job.part_total = int(m.group(1))
+            return True
+        m = RE_DEST.search(line)
+        if m and line.startswith("[download]"):
+            job.part_index = min(job.part_index + 1, max(job.part_total, 1))
+            job.title = os.path.basename(m.group(1).strip())
+            job.item = "%d/%d" % (job.part_index, job.part_total) if job.part_total > 1 else ""
+            self._post("title", job.id)
+            return True
+        m = RE_FFTIME.search(line)
+        if m and job.part_index:
+            elapsed = int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3))
+            idx = job.part_index - 1
+            span = sections[idx][1] - sections[idx][0] if idx < len(sections) else 0
+            frac = min(1.0, elapsed / span) if span > 0 else 0.0
+            job.percent = min(99.9, (idx + frac) * 100.0 / max(job.part_total, 1))
+            sp = RE_FFSPEED.search(line)
+            job.speed = sp.group(1) if sp else job.speed
+            sz = RE_FFSIZE.search(line)
+            job.size = sz.group(1).replace(" ", "") if sz else job.size
+            job.eta = ""
+            self._post("progress", job.id)
+            return True
+        if RE_PROGRESS.match(line):
+            # "[download] 100% of ..." clôt chaque passage : ne pas afficher 100 % trop tôt.
+            if job.part_index:
+                job.percent = min(99.9, job.part_index * 100.0 / max(job.part_total, 1))
+                self._post("progress", job.id)
+            return True
+        return False
 
     def cancel(self, job_id):
         with self.lock:
