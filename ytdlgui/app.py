@@ -12,6 +12,8 @@ import queue
 import re
 import subprocess
 import threading
+import time
+import webbrowser
 
 import webview
 
@@ -22,6 +24,7 @@ from . import engine as eng
 from . import i18n
 from . import preview
 from . import system
+from . import updater
 from .binaries import (
     CREATE_NO_WINDOW, app_dir, download_deno, download_ffmpeg, download_ytdlp, find_deno,
     find_ffmpeg, find_ytdlp, format_command, get_version, open_folder, resource_path,
@@ -54,6 +57,7 @@ AUDIO_FORMATS = ("mp3", "m4a", "opus", "flac", "wav")
 SUB_FORMATS = ("srt", "vtt", "ass", "lrc")
 BROWSERS = ("firefox", "chrome", "edge", "brave", "opera", "vivaldi", "chromium")
 
+UPDATE_INTERVAL = 20 * 3600   # vérification automatique : au plus une fois par jour
 DEFAULT_SIZE = (1100, 780)
 MIN_SIZE = (900, 640)
 LOG_KEEP = 5000
@@ -130,6 +134,10 @@ def default_settings(base_dir):
         "ytdlp_path": "",
         "ffmpeg_path": "",
         "autoscroll_log": True,
+        # Application
+        "update_check": True,     # vérifier les mises à jour au démarrage
+        "update_skip": "",        # version que l'utilisateur a choisi d'ignorer
+        "deno_prompt": True,      # proposer Deno au démarrage s'il manque
     }
 
 
@@ -189,6 +197,8 @@ class Api:
         self._settings = normalize_settings(values)
         self._geometry = stored.get("_geometry", "")
         self._maximized = bool(stored.get("_maximized", False))
+        self._update_checked = float(stored.get("_update_checked") or 0)
+        self._updated_to = str(stored.get("_updated_to") or "")
         i18n.set_lang(self._settings["ui_lang"])
 
         self._q = queue.Queue()
@@ -203,6 +213,12 @@ class Api:
         self._proxy = StreamProxy(network=self._network)
         self._previews = preview.Previews(self._proxy, self._push, self._paths, self._cfg)
         threading.Thread(target=clips.purge_stale_dirs, daemon=True).start()
+        self._update = None          # release proposée (dict de updater.latest_release)
+        self._update_root = None     # nouvelle version extraite, prête à remplacer l'app
+        self._update_busy = False
+        if updater.frozen():
+            # Reste d'une mise à jour téléchargée mais jamais appliquée (ou échouée)
+            threading.Thread(target=updater.clean_staging, daemon=True).start()
 
     # ---------------------------------------------------------- fenêtre
     def _attach(self, window):
@@ -251,6 +267,9 @@ class Api:
         if self._geometry:
             data["_geometry"] = self._geometry
         data["_maximized"] = self._maximized
+        data["_update_checked"] = self._update_checked
+        if self._updated_to:
+            data["_updated_to"] = self._updated_to
         save_settings(self._dir, data)
 
     def _push(self, event):
@@ -263,8 +282,17 @@ class Api:
         with self._lock:
             settings = dict(self._settings)
         self._check_version(ytdlp)
+        updated = ""
+        if self._updated_to:
+            # Premier lancement après une mise à jour : la page l'annonce une fois.
+            updated = __version__ if self._updated_to == __version__ else ""
+            self._updated_to = ""
+            self._save()
+        self._auto_update_check()
         return {
             "version": __version__,
+            "updated": updated,
+            "frozen": updater.frozen(),
             "settings": settings,
             "strings": i18n.strings(),
             "lang": i18n.get_lang(),
@@ -278,6 +306,80 @@ class Api:
             "running": self._engine.running,
             "log": list(self._log),
         }
+
+    # ---------------------------------------------------------- mise à jour de l'application
+    def _auto_update_check(self):
+        """Au démarrage de l'application packagée, au plus une fois par jour. Depuis les
+        sources, la version du dépôt n'est pas celle des releases : vérification manuelle."""
+        if not updater.frozen() or not self._settings["update_check"]:
+            return
+        if time.time() - self._update_checked < UPDATE_INTERVAL:
+            return
+
+        def worker():
+            result = self._find_update()
+            if result.get("version") and result["version"] != self._settings["update_skip"]:
+                self._push(dict(result, type="update_available"))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _find_update(self):
+        try:
+            info = updater.latest_release()
+        except Exception as exc:
+            return {"error": str(exc)}
+        self._update_checked = time.time()
+        self._save()
+        if not updater.is_newer(info["version"], __version__):
+            return {"current": __version__}
+        self._update = info
+        return {"version": info["version"], "current": __version__, "notes": info["notes"],
+                "url": info["url"], "size": info["size"],
+                "can_install": updater.can_self_update() and bool(info["asset_url"])}
+
+    def update_check(self):
+        """Vérification manuelle (section Avancé)."""
+        return self._find_update()
+
+    def update_skip(self, version):
+        self.set_setting("update_skip", str(version))
+
+    def update_install(self):
+        """Télécharge et prépare la nouvelle version, en arrière-plan ; la page suit avec
+        les événements update_progress, puis update_ready ou update_failed."""
+        if self._update is None or self._update_busy or not updater.can_self_update():
+            return False
+        self._update_busy = True
+
+        def worker():
+            try:
+                self._update_root = updater.download(
+                    self._update, lambda pct: self._push({"type": "update_progress", "pct": round(pct, 1)}))
+                self._push({"type": "update_ready", "version": self._update["version"]})
+            except Exception as exc:
+                updater.clean_staging()
+                self._push({"type": "update_failed", "error": str(exc)})
+            finally:
+                self._update_busy = False
+        threading.Thread(target=worker, daemon=True).start()
+        return True
+
+    def update_restart(self):
+        """Ferme l'application et laisse le script de mise à jour la remplacer et la relancer."""
+        if not self._update_root:
+            return False
+        self._updated_to = self._update["version"]
+        self._force_close = True
+        self._shutdown()
+        self._save(with_geometry=True)
+        updater.launch_swap(self._update_root)
+        if self._window is not None:
+            self._window.destroy()
+        return True
+
+    def open_url(self, url):
+        """Ouvre une page (release, documentation) dans le navigateur du système."""
+        if str(url).startswith("https://"):
+            webbrowser.open(url)
 
     def _paths(self):
         with self._lock:

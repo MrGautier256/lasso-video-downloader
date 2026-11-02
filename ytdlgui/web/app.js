@@ -277,11 +277,13 @@ function renderSidebar() {
     h('div', { class: 'brand' }, html(LOGO),
       h('div', { class: 'brand__text' },
         h('div', { class: 'brand__name' }, 'YTDL', h('b', null, 'Interface')),
-        h('span', { class: 'brand__ver' }, 'v' + S.version + ' · yt-dlp'))),
+        h('span', { class: 'brand__ver' }, 'v' + S.version + ' · yt-dlp'),
+        S.ui.updSlot = h('div', { class: 'upd-slot' }))),
     nav,
     h('div', { class: 'sidebar__foot' }, bins, h('div', { class: 'prefs' }, themeSeg, h('div', { class: 'select select--sm' }, langSel))));
   updateBins();
   updateBadges();
+  updateUpdChip();
   return side;
 }
 
@@ -871,6 +873,7 @@ const PAGES = [
     { title: 'adv.binaries', fields: [
       { type: 'path', name: 'ytdlp_path', label: 'adv.ytdlppath', tip: 'adv.ytdlppath.tip', browse: 'file', detected: () => S.bin.ytdlpPath },
       { type: 'path', name: 'ffmpeg_path', label: 'adv.ffmpegpath', tip: 'adv.ffmpegpath.tip', browse: 'file', detected: () => S.bin.ffmpegPath },
+      { type: 'toggle', name: 'deno_prompt', label: 'adv.denoprompt', tip: 'inst.deno_desc' },
       { type: 'actions', buttons: [
         { ic: 'refresh', label: 'adv.update', fn: () => updateYtdlp() },
         { ic: 'download', label: 'adv.dlbin', fn: () => openInstall(['ytdlp']) },
@@ -881,6 +884,9 @@ const PAGES = [
       { type: 'toggle', name: 'verbose', label: 'adv.verbose', tip: 'adv.verbose.tip' },
       { type: 'text', name: 'custom_args', label: 'adv.custom', tip: 'adv.custom.tip', mono: true, stack: true, placeholder: '--live-from-start --match-filter "duration<600"' }] },
     { title: 'adv.cmd', help: 'adv.cmd.help', bare: true, fields: [{ type: 'command' }] },
+    { title: 'upd.section', fields: [
+      { type: 'appversion' },
+      { type: 'toggle', name: 'update_check', label: 'upd.auto', tip: 'upd.auto.tip' }] },
   ] },
 ];
 
@@ -1010,6 +1016,13 @@ function renderField(f) {
     case 'actions':
       return h('div', { class: 'row' }, h('div', { class: 'row__actions' },
         f.buttons.map(b => h('button', { class: 'btn', type: 'button', onclick: b.fn }, icon(b.ic), T(b.label)))));
+    case 'appversion':
+      return h('div', { class: 'row' },
+        h('div', { class: 'row__text' },
+          h('span', { class: 'row__label' }, T('upd.current', { v: S.version })),
+          h('span', { class: 'row__tip' }, S.frozen ? T('upd.auto.tip') : T('upd.source'))),
+        h('div', { class: 'row__ctrl' },
+          h('button', { class: 'btn', type: 'button', onclick: checkUpdate }, icon('refresh'), T('upd.check'))));
     case 'command': {
       const pre = h('pre', { class: 'cmd' });
       S.ui.cmd = pre;
@@ -1186,8 +1199,10 @@ function alertDialog(message, { title = 'YTDL Interface', kind = '', pre = '' } 
   });
 }
 
-// Installation de yt-dlp / ffmpeg
-function openInstall(components) {
+// Installation de yt-dlp / ffmpeg (nécessaires) et de Deno (conseillé, facultatif)
+const OPTIONAL_BINS = new Set(['deno']);
+
+function openInstall(components, { startup = false } = {}) {
   if (S.install && S.install.entry && S.modals.includes(S.install.entry)) return;
   const want = components || ['ytdlp', 'ffmpeg'];
   const missing = want.filter(c => !S.bin[c]);
@@ -1195,26 +1210,47 @@ function openInstall(components) {
   const names = { ytdlp: 'yt-dlp', ffmpeg: 'ffmpeg', deno: 'Deno' };
   const rows = {};
   const list = h('div', { class: 'inst' });
+  const intro = h('p', { class: 'dialog__msg' });
+  const setIntro = () => {
+    intro.textContent = T(missing.some(c => !OPTIONAL_BINS.has(c)) ? 'inst.needed_intro' : 'inst.optional_intro');
+  };
   for (const c of missing) {
     const status = h('span', { class: 'inst__status' }, T('inst.status_waiting'));
     const fill = h('div', { class: 'bar__fill', style: 'width:0%' });
-    rows[c] = { status, fill };
-    list.append(h('div', { class: 'inst__row' },
-      h('div', { class: 'inst__top' }, h('b', null, names[c]), status),
+    // Au démarrage, un composant facultatif peut être refusé pour de bon.
+    const never = startup && OPTIONAL_BINS.has(c)
+      ? h('button', { class: 'btn btn--sm btn--ghost inst__never', type: 'button', onclick: () => {
+        setSetting('deno_prompt', false);
+        row.remove();
+        missing.splice(missing.indexOf(c), 1);
+        delete rows[c];
+        if (!missing.length) entry.close(); else setIntro();
+      } }, T('inst.never'))
+      : null;
+    const row = h('div', { class: 'inst__row' },
+      h('div', { class: 'inst__top' }, h('b', null, names[c]),
+        OPTIONAL_BINS.has(c) ? h('span', { class: 'inst__tag' }, T('inst.recommended')) : null, status),
       h('p', { class: 'inst__desc' }, T('inst.' + c + '_desc')),
-      h('div', { class: 'bar', style: 'height:6px' }, fill)));
+      h('div', { class: 'bar', style: 'height:6px' }, fill),
+      never);
+    rows[c] = { status, fill, never };
+    list.append(row);
   }
+  setIntro();
   const summary = h('p', { class: 'inst__summary', hidden: true });
   const later = h('button', { class: 'btn', type: 'button', onclick: () => entry.close() }, T('inst.btn_later'));
   const go = h('button', { class: 'btn btn--primary', type: 'button', onclick: async () => {
     go.disabled = true; later.disabled = true;
     entry.closable = false;
-    for (const c of missing) rows[c].status.textContent = T('inst.status_downloading');
+    for (const c of missing) {
+      rows[c].status.textContent = T('inst.status_downloading');
+      if (rows[c].never) rows[c].never.remove();
+    }
     await call('install', missing);
   } }, icon('download'), T('inst.btn_install'));
   const entry = modal({
     title: T('inst.title'), ic: 'package',
-    body: [h('p', { class: 'dialog__msg' }, T('inst.needed_intro')), list, summary],
+    body: [intro, list, summary],
     foot: [later, go],
     closable: true,
     onClose: () => { S.install = null; },
@@ -2232,6 +2268,131 @@ function edKey(ed, e) {
   if (handled) e.preventDefault();
 }
 
+// ------------------------------------------------------------------ mise à jour de l'application
+// Python vérifie la dernière release GitHub (au démarrage au plus une fois par jour, ou à la
+// demande) ; rien ne s'installe sans un clic. Cf. ytdlgui/updater.py.
+function updateUpdChip() {
+  const slot = S.ui.updSlot, u = S.update;
+  if (!slot) return;
+  slot.replaceChildren(u ? h('button', { class: 'upd-chip', type: 'button', onclick: () => openUpdate(u) },
+    icon('sparkles'), T(u.state === 'ready' ? 'upd.badge.ready' : 'upd.badge', { v: u.version })) : '');
+}
+
+function showWhenFree(fn) {   // attend qu'aucune autre fenêtre ne soit ouverte
+  if (S.modals.length || S.startupPending) setTimeout(() => showWhenFree(fn), 1500); else fn();
+}
+
+// Notes de version GitHub (Markdown) en texte lisible.
+function plainNotes(md) {
+  return String(md || '')
+    .replace(/\r/g, '')
+    .replace(/^#+\s*/gm, '')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/^\s*[*-]\s+/gm, '• ')
+    .replace(/ by @\S+ in https:\/\/\S+/g, '')
+    .replace(/^\s*Full Changelog\b.*$/gim, '')
+    .replace(/https:\/\/github\.com\/\S+/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+async function checkUpdate() {
+  toast(T('upd.checking'));
+  const r = await call('update_check');
+  if (!r) return;
+  if (r.error) { toast(T('upd.error') + ' ' + r.error, 'bad', 6000); return; }
+  if (!r.version) { toast(T('upd.none', { v: r.current }), 'ok'); return; }
+  S.update = Object.assign({ state: 'new' }, r);
+  updateUpdChip();
+  openUpdate(S.update);
+}
+
+function openUpdate(u) {
+  if (S.updateModal && S.modals.includes(S.updateModal.entry)) return;
+  const body = h('div', { class: 'upd' });
+  const foot = h('div', { style: 'display:contents' });
+  const entry = modal({ title: T('upd.title'), ic: 'sparkles', body, foot, onClose: () => { S.updateModal = null; } });
+  S.updateModal = { entry, body, foot };
+  paintUpdate();
+}
+
+function paintUpdate() {
+  const m = S.updateModal, u = S.update;
+  if (!m || !u) return;
+  const close = () => m.entry.close();
+  const page = () => { call('open_url', u.url); };
+  const head = h('p', { class: 'dialog__msg' }, T('upd.version', { v: u.version, cur: u.current || S.version }));
+  if (u.state === 'downloading') {
+    m.fill = h('div', { class: 'bar__fill', style: 'width:' + (u.pct || 0) + '%' });
+    m.pct = h('span', { class: 'inst__status' }, T('upd.downloading', { pct: Math.round(u.pct || 0) }));
+    m.body.replaceChildren(head, h('div', { class: 'inst__row' }, m.pct, h('div', { class: 'bar', style: 'height:6px;margin-top:10px' }, m.fill)));
+    m.foot.replaceChildren(h('button', { class: 'btn', type: 'button', onclick: close }, T('upd.later')));
+    m.entry.closable = true;
+    return;
+  }
+  if (u.state === 'ready') {
+    m.body.replaceChildren(head, h('p', { class: 'dialog__msg' }, T('upd.ready')));
+    m.foot.replaceChildren(
+      h('button', { class: 'btn', type: 'button', onclick: close }, T('upd.later')),
+      h('button', { class: 'btn btn--primary', type: 'button', onclick: restartForUpdate }, icon('refresh'), T('upd.restart')));
+    return;
+  }
+  if (u.state === 'failed') {
+    m.body.replaceChildren(head, h('p', { class: 'dialog__msg' }, T('upd.failed')), h('pre', { class: 'out' }, u.error || ''));
+    m.foot.replaceChildren(
+      h('button', { class: 'btn', type: 'button', onclick: close }, T('an.close')),
+      h('button', { class: 'btn btn--primary', type: 'button', onclick: page }, icon('external'), T('upd.page')));
+    return;
+  }
+  const notes = plainNotes(u.notes);
+  m.body.replaceChildren(...[head,   // replaceChildren écrirait « null » : on filtre
+    u.size && h('p', { class: 'upd__size' }, T('upd.size', { s: humanSize(u.size) })),
+    notes && h('div', { class: 'upd__notes' }, h('h3', null, T('upd.notes')), h('div', { class: 'upd__text' }, notes)),
+    !u.can_install && h('p', { class: 'upd__manual' }, T('upd.manual'))].filter(Boolean));
+  m.foot.replaceChildren(
+    h('button', { class: 'btn btn--ghost', type: 'button', onclick: () => {
+      call('update_skip', u.version);
+      S.update = null;
+      updateUpdChip();
+      close();
+    } }, T('upd.skip')),
+    h('div', { class: 'spacer' }),
+    h('button', { class: 'btn', type: 'button', onclick: close }, T('upd.later')),
+    u.can_install
+      ? h('button', { class: 'btn btn--primary', type: 'button', onclick: async () => {
+        u.state = 'downloading';
+        u.pct = 0;
+        paintUpdate();
+        if (!(await call('update_install'))) { u.state = 'failed'; paintUpdate(); }
+      } }, icon('download'), T('upd.install'))
+      : h('button', { class: 'btn btn--primary', type: 'button', onclick: page }, icon('external'), T('upd.page')));
+}
+
+function onUpdateEvent(ev) {
+  const u = S.update;
+  if (!u) return;
+  if (ev.type === 'update_progress') {
+    u.pct = ev.pct;
+    const m = S.updateModal;
+    if (m && m.fill) {
+      m.fill.style.width = ev.pct + '%';
+      m.pct.textContent = T('upd.downloading', { pct: Math.round(ev.pct) });
+    }
+    return;
+  }
+  u.state = ev.type === 'update_ready' ? 'ready' : 'failed';
+  u.error = ev.error;
+  updateUpdChip();
+  if (S.updateModal) paintUpdate(); else showWhenFree(() => openUpdate(u));
+}
+
+async function restartForUpdate() {
+  if (S.jobs.some(j => j.status === 'running')
+      && (await confirmDialog(T('msg.quitconfirm'), { kind: 'warn' })) !== 'yes') return;
+  await call('update_restart');
+}
+
 // ------------------------------------------------------------------ menu contextuel, toasts
 let menuEl = null;
 function closeMenu() { if (menuEl) { menuEl.remove(); menuEl = null; } }
@@ -2355,6 +2516,14 @@ function onEvent(ev) {
     case 'preview_progress': case 'preview_ready': case 'preview_failed': case 'preview_estimate':
       onPreviewEvent(ev);
       break;
+    case 'update_available':
+      S.update = Object.assign({ state: 'new' }, ev);
+      updateUpdChip();
+      showWhenFree(() => openUpdate(S.update));
+      break;
+    case 'update_progress': case 'update_ready': case 'update_failed':
+      onUpdateEvent(ev);
+      break;
     case 'confirm_quit':
       confirmDialog(T('msg.quitconfirm'), { kind: 'warn' }).then(ans => { if (ans === 'yes') call('quit'); });
       break;
@@ -2374,6 +2543,7 @@ async function boot() {
   S.presetKeys = st.preset_keys;
   S.systemDark = st.system_dark;
   S.preview = st.preview || '';
+  S.frozen = !!st.frozen;
   Object.assign(S.bin, { ytdlp: st.binaries.ytdlp, ffmpeg: st.binaries.ffmpeg, deno: st.binaries.deno, ytdlpPath: st.binaries.ytdlp_path || '', ffmpegPath: st.binaries.ffmpeg_path || '', denoPath: st.binaries.deno_path || '', checking: !!st.binaries.ytdlp });
   S.caps = probeCodecs();
   S.jobs = st.jobs || [];
@@ -2401,7 +2571,13 @@ async function boot() {
   setupDrop();
   poll();
 
-  if (!S.bin.ytdlp || !S.bin.ffmpeg) setTimeout(() => openInstall(), 400);
+  const startupMissing = ['ytdlp', 'ffmpeg'].filter(c => !S.bin[c]);
+  if (!S.bin.deno && S.settings.deno_prompt) startupMissing.push('deno');
+  if (startupMissing.length) {
+    S.startupPending = true;   // la proposition de mise à jour attend cette fenêtre
+    setTimeout(() => { S.startupPending = false; openInstall(startupMissing, { startup: true }); }, 400);
+  }
+  if (st.updated) setTimeout(() => toast(T('upd.done', { v: st.updated }), 'ok', 6000), 600);
   if (window.YTDL_AFTER_BOOT) window.YTDL_AFTER_BOOT({ openAnalyze, openInstall, go, toast });
 }
 
