@@ -55,6 +55,11 @@ def format_sections(sections):
 # par défaut du conteneur (très lent en WebM/VP9).
 _PRECISE_H264 = "-c:v libx264 -preset veryfast -crf 18 -c:a aac -b:a 192k"
 _PRECISE_VP9 = "-c:v libvpx-vp9 -deadline realtime -cpu-used 8 -crf 32 -b:v 0 -c:a libopus"
+# Sur un passage, yt-dlp garde les chapitres et segments SponsorBlock aux horaires de la
+# vidéo entière : intégrés, un chapitre de 3 h donne à un extrait d'une minute une durée
+# affichée de 3 h ; découper par chapitre ou retirer des segments viserait les mauvais
+# moments. Placées après les réglages globaux, ces options les annulent pour le passage.
+_SECTION_OVERRIDES = ["--no-embed-chapters", "--no-split-chapters", "--no-sponsorblock"]
 
 
 def build_network_args(cfg):
@@ -280,7 +285,7 @@ def build_command(cfg, url, ytdlp_path, ffmpeg_path=None, clip=None, info_json=N
     else:
         sec = cfg.get("sections", "").strip()
         if sec:
-            args += ["--download-sections", sec]
+            args += ["--download-sections", sec] + _SECTION_OVERRIDES
             if cfg.get("force_keyframes"):
                 args += ["--force-keyframes-at-cuts"]
     if cfg.get("simulate"):
@@ -308,7 +313,7 @@ def clip_args(cfg, clip):
     args = ["--download-sections", format_sections(clip["sections"]),
             # ffmpeg sans bannière ni métadonnées : seules ses statistiques (time=...)
             # restent, et servent à la progression (cf. engine.py).
-            "--downloader-args", "ffmpeg_i:-hide_banner -loglevel warning -stats"]
+            "--downloader-args", "ffmpeg_i:-hide_banner -loglevel warning -stats"] + _SECTION_OVERRIDES
     if clip_is_precise(clip):
         args += ["--force-keyframes-at-cuts"]
         if cfg.get("mode", "video") != "audio":
