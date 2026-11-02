@@ -1,4 +1,4 @@
-/* YTDL Interface : interface (pywebview).
+/* Lasso : interface (pywebview).
    Toute la logique yt-dlp (file, commande, binaires, réglages) reste côté Python, dans
    ytdlgui/app.py ; cette page affiche l'état et relaie les actions via window.pywebview.api. */
 (() => {
@@ -276,7 +276,7 @@ function renderSidebar() {
   const side = h('aside', { class: 'sidebar' },
     h('div', { class: 'brand' }, html(LOGO),
       h('div', { class: 'brand__text' },
-        h('div', { class: 'brand__name' }, 'YTDL', h('b', null, 'Interface')),
+        h('div', { class: 'brand__name' }, 'Lasso'),
         h('span', { class: 'brand__ver' }, 'v' + S.version + ' · yt-dlp'),
         S.ui.updSlot = h('div', { class: 'upd-slot' }))),
     nav,
@@ -1301,7 +1301,7 @@ function modal({ title, ic, kind, body, foot, wide, size, closable = true, onClo
   return entry;
 }
 
-function confirmDialog(message, { title = 'YTDL Interface', kind = 'warn', yes = T('dlg.yes'), no = T('dlg.no') } = {}) {
+function confirmDialog(message, { title = 'Lasso', kind = 'warn', yes = T('dlg.yes'), no = T('dlg.no') } = {}) {
   return new Promise(resolve => {
     let m;
     const done = v => { resolve(v); m.close(v); };
@@ -1314,7 +1314,7 @@ function confirmDialog(message, { title = 'YTDL Interface', kind = 'warn', yes =
     });
   });
 }
-function alertDialog(message, { title = 'YTDL Interface', kind = '', pre = '' } = {}) {
+function alertDialog(message, { title = 'Lasso', kind = '', pre = '' } = {}) {
   return new Promise(resolve => {
     const m = modal({
       title, ic: kind === 'bad' ? 'alert' : kind === 'ok' ? 'check' : 'info', kind,

@@ -1,8 +1,8 @@
 **English** · [Français](README.fr.md)
 
-# YTDL Interface
+# Lasso
 
-A full-featured graphical interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), the actively maintained successor to youtube-dl. Works with YouTube and 1000+ other sites.
+**Lasso Video Downloader** (formerly YTDL Interface): a full-featured graphical interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), the actively maintained successor to youtube-dl. Works with YouTube and 1000+ other sites.
 
 ## Getting started
 
@@ -86,7 +86,7 @@ This tool downloads content from third-party sites. Use it in accordance with th
 
 ## License and credits
 
-YTDL Interface is distributed under the MIT license (see [LICENSE](LICENSE)).
+Lasso is distributed under the MIT license (see [LICENSE](LICENSE)).
 
 On first launch, the app downloads for its own operation:
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) (Unlicense / public domain)

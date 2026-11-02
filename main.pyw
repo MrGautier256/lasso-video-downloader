@@ -1,4 +1,4 @@
-"""Point d'entrée de YTDL Interface. Lancer avec pythonw (sans console) sous Windows,
+"""Point d'entrée de Lasso. Lancer avec pythonw (sans console) sous Windows,
 python3 main.pyw sous Linux."""
 import errno
 import os
@@ -83,8 +83,8 @@ def _message(title, text, error=False):
 def main():
     _restore_child_env()
     if _already_running():
-        _message("YTDL Interface",
-                 "YTDL Interface est déjà ouvert.\nYTDL Interface is already running.")
+        _message("Lasso",
+                 "Lasso est déjà ouvert.\nLasso is already running.")
         return
     try:
         from ytdlgui.app import run
@@ -96,7 +96,7 @@ def main():
                 f.write(err + "\n")
         except OSError:
             pass
-        _message("YTDL Interface : erreur",
+        _message("Lasso : erreur",
                  "Une erreur inattendue s'est produite (détails dans error.log) :\n\n" + err[-1200:],
                  error=True)
         raise
