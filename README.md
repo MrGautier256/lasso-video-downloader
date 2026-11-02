@@ -4,6 +4,22 @@
 
 **Lasso Video Downloader** (formerly YTDL Interface): a full-featured graphical interface for [yt-dlp](https://github.com/yt-dlp/yt-dlp), the actively maintained successor to youtube-dl. Works with YouTube and 1000+ other sites.
 
+## Supported sites
+
+Lasso downloads from every site yt-dlp supports, more than 1,700: YouTube, Twitch, Vimeo, Dailymotion, X (Twitter), Reddit, TikTok, Instagram, Facebook, SoundCloud, Bandcamp, Bilibili, Kick, Arte, France TV… ([full list](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)). What differs from site to site are the features around the download:
+
+- **YouTube:** everything works.
+  - Videos, playlists and channels, SponsorBlock.
+  - The clip editor shows thumbnails along the timeline, chapters and "most replayed" moments.
+  - A clip only downloads the parts of the video it needs.
+- **Twitch:** VODs, highlights and clips. The clip editor works, without thumbnails or "most replayed" moments, and a clip only downloads its passage.
+- **Other sites:** downloading works the same way.
+  - The clip editor plays the video directly when the site provides a playable stream. Otherwise, it offers to download a 720p preview first.
+  - Chapters appear when the site provides them.
+- **Live streams:** they cannot be cut while they are live.
+- **Content behind an account** (private or age-restricted videos, often Instagram and Facebook): use your browser's cookies, in the *Network & accounts* settings page.
+- **Not supported:** DRM-protected services (Netflix, Disney+, Prime Video, Spotify, Deezer…).
+
 ## Getting started
 
 **Ready-to-run build (recommended):** from the [Releases](../../releases) page, download the archive for your system, extract it anywhere, and run the executable inside the extracted folder. No install, no prerequisites.

@@ -4,6 +4,22 @@
 
 **Lasso Video Downloader** (anciennement YTDL Interface) : interface graphique complète pour [yt-dlp](https://github.com/yt-dlp/yt-dlp), le successeur maintenu de youtube-dl. Compatible YouTube et plus de 1000 autres sites.
 
+## Sites compatibles
+
+Lasso télécharge depuis tous les sites que reconnaît yt-dlp, plus de 1 700 : YouTube, Twitch, Vimeo, Dailymotion, X (Twitter), Reddit, TikTok, Instagram, Facebook, SoundCloud, Bandcamp, Bilibili, Kick, Arte, France TV… ([liste complète](https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md)). Ce qui varie d'un site à l'autre, ce sont les fonctions autour du téléchargement :
+
+- **YouTube :** tout fonctionne.
+  - Vidéos, playlists et chaînes, SponsorBlock.
+  - L'éditeur de passages montre des vignettes le long de la frise, les chapitres et les « moments les plus revus ».
+  - Un extrait ne télécharge que les morceaux du passage.
+- **Twitch :** rediffusions (VOD), temps forts et clips. L'éditeur fonctionne, sans vignettes ni « moments les plus revus », et un extrait ne télécharge que le passage.
+- **Autres sites :** le téléchargement fonctionne de la même façon.
+  - L'éditeur affiche directement la vidéo quand le site fournit un flux lisible. Sinon, il propose de télécharger d'abord un aperçu en 720p.
+  - Les chapitres apparaissent quand le site en fournit.
+- **Directs :** ils ne peuvent pas être découpés tant qu'ils sont en cours.
+- **Contenus réservés aux comptes** (vidéos privées, limitées par l'âge, souvent Instagram et Facebook) : utilisez les cookies de votre navigateur, dans la page de réglages *Réseau et comptes*.
+- **Non pris en charge :** les services protégés par DRM (Netflix, Disney+, Prime Video, Spotify, Deezer…).
+
 ## Lancement
 
 **Version prête à l'emploi (recommandé) :** depuis la page [Releases](../../releases), téléchargez l'archive correspondant à votre système, extrayez-la où vous voulez, puis lancez l'exécutable dans le dossier extrait. Aucune installation, aucun prérequis.
