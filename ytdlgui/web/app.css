@@ -452,6 +452,44 @@ button.chip--warn:hover { color: var(--warn); border-color: color-mix(in srgb, v
   user-select: text; -webkit-user-select: text;
 }
 .composer__tools { display: flex; align-items: center; gap: var(--sp-1); margin-top: var(--sp-2); }
+.composer__tools .btn[hidden] { display: none; }
+/* Un lien par ligne : titre, durée et boutons propres */
+.links {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 176px; overflow-y: auto;
+  margin: var(--sp-2) calc(-1 * var(--sp-2)) 0; padding: var(--sp-2) var(--sp-2) 0;
+  border-top: 1px solid var(--line);
+}
+.links[hidden] { display: none; }
+.link {
+  display: flex; align-items: center; gap: 2px;
+  padding: 3px 4px 3px 3px;
+  border: 1px solid transparent; border-radius: var(--r-md);
+  transition: background var(--t-fast) var(--ease), border-color var(--t-fast) var(--ease);
+}
+.link:hover, .link:focus-within { background: var(--panel-2); border-color: var(--line); }
+.link__label {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-3);
+  padding: 0 6px 0 0; border: 0; background: none; color: var(--text); text-align: left;
+  font: 400 13px/1.25 var(--font-ui); cursor: pointer;
+}
+.link__thumb {
+  flex: none; width: 64px; height: 36px; border-radius: 6px; overflow: hidden;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent-2) 30%, var(--panel-3)), var(--panel-3));
+  display: grid; place-items: center; color: var(--text-2);
+}
+.link__thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.link__thumb svg { width: 16px; height: 16px; }
+.link__text { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.link__title, .link__meta { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.link__title { font-weight: 600; color: var(--text); }
+.link__title.is-url { font: 400 12.5px/1.25 var(--font-mono); color: var(--text-2); }
+.link__meta { font: 400 11.5px/1.2 var(--font-mono); color: var(--text-3); }
+.link__status.is-loading { color: var(--accent-ink); animation: link-pulse 1.4s var(--ease) infinite; }
+.link__status.is-error { color: var(--warn); }
+@keyframes link-pulse { 50% { opacity: .35; } }
+.link__nocut { display: inline-flex; }
+@media (max-height: 700px) { .links { max-height: 108px; } }
 .composer__hint { margin-left: auto; font-size: 12px; color: var(--text-3); display: inline-flex; align-items: center; gap: 6px; }
 .composer__opts {
   display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center;

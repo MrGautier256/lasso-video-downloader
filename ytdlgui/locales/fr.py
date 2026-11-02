@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Découper…",
     "dl.cut.tip": "Ouvre un aperçu du lien sous le curseur pour choisir\nle ou les passages à télécharger.",
+    "dl.link.loading": "Lecture des infos…",
+    "dl.link.error": "Infos indisponibles",
+    "dl.link.playlist": "Playlist",
+    "dl.link.videos": "{n} vidéo(s)",
+    "dl.link.live": "En direct",
+    "dl.link.upcoming": "Direct à venir",
     "an.cut": "Prévisualiser et découper",
     "menu.cut": "Découper…",
     "job.parts": "{n} passage(s) · {d}",

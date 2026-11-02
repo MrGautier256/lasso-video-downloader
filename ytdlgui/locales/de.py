@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Zuschneiden…",
     "dl.cut.tip": "Öffnet eine Vorschau des Links unter dem Cursor, um\ndie herunterzuladenden Abschnitte zu wählen.",
+    "dl.link.loading": "Infos werden geladen…",
+    "dl.link.error": "Infos nicht verfügbar",
+    "dl.link.playlist": "Playlist",
+    "dl.link.videos": "{n} Video(s)",
+    "dl.link.live": "Live",
+    "dl.link.upcoming": "Geplanter Livestream",
     "an.cut": "Vorschau und zuschneiden",
     "menu.cut": "Zuschneiden…",
     "job.parts": "{n} Abschnitt(e) · {d}",

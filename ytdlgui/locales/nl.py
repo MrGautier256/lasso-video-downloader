@@ -321,6 +321,12 @@ S = {
 
     "dl.cut": "Knippen…",
     "dl.cut.tip": "Opent een voorbeeld van de link onder de cursor om\nhet fragment of de fragmenten te kiezen om te downloaden.",
+    "dl.link.loading": "Info ophalen…",
+    "dl.link.error": "Info niet beschikbaar",
+    "dl.link.playlist": "Afspeellijst",
+    "dl.link.videos": "{n} video('s)",
+    "dl.link.live": "Live",
+    "dl.link.upcoming": "Geplande livestream",
     "an.cut": "Voorbeeld en knippen",
     "menu.cut": "Knippen…",
     "job.parts": "{n} fragment(en) · {d}",
