@@ -227,11 +227,13 @@ class Previews:
         else:
             out["video"] = {"url": self._proxy.add(self._key(s, "v"), Target(
                 video["url"], video.get("http_headers"), video.get("cookies"), mime=_mime(video),
-                renew=lambda fid=str(video.get("format_id")): renew(fid))), "mime": _mime(video)}
+                renew=lambda fid=str(video.get("format_id")): renew(fid),
+                available_at=video.get("available_at"))), "mime": _mime(video)}
         if audio is not None:
             out["audio"] = {"url": self._proxy.add(self._key(s, "a"), Target(
                 audio["url"], audio.get("http_headers"), audio.get("cookies"), mime=_mime(audio, True),
-                renew=lambda fid=str(audio.get("format_id")): renew(fid))), "mime": _mime(audio, True)}
+                renew=lambda fid=str(audio.get("format_id")): renew(fid),
+                available_at=audio.get("available_at"))), "mime": _mime(audio, True)}
         return out
 
     def _hls(self, s, fmt):

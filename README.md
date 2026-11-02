@@ -8,11 +8,11 @@
 
 **Ready-to-run build (recommended):** from the [Releases](../../releases) page, download the archive for your system, extract it anywhere, and run the executable inside the extracted folder. No install, no prerequisites.
 
-- **Windows:** `YTDL-Interface-windows.zip`, then run `YTDL-Interface.exe`.
-- **Linux (x86_64):** `YTDL-Interface-linux.tar.gz`, then:
+- **Windows:** `Lasso-windows.zip`, then run `Lasso.exe`.
+- **Linux (x86_64):** `Lasso-linux.tar.gz`, then:
   ```bash
-  tar -xzf YTDL-Interface-linux.tar.gz
-  ./YTDL-Interface/YTDL-Interface
+  tar -xzf Lasso-linux.tar.gz
+  ./Lasso/Lasso
   ```
   Works on distributions with glibc 2.35 or newer (Ubuntu 22.04+, Debian 12+, Fedora 36+, Linux Mint 21+...).
 
@@ -38,7 +38,7 @@ Settings in Advanced > Application: startup check (can be turned off) and a "Che
 ## Language and theme
 
 At the bottom of the side menu:
-- **Theme**: the interface follows the Cosmic design system (deep-space background, neon violet accents) in dark mode, with a light variant. "Auto" (screen icon) follows the system theme: the Windows theme (title bar included, in the interface's colors on Windows 11), or on Linux the light/dark setting of GNOME and compatible desktops.
+- **Theme**: the interface follows the Clay design system (warm cream and terracotta, dashed outlines for what has not started yet) in light mode, with a warm dark variant. "Auto" (screen icon) follows the system theme: the Windows theme (title bar included, in the interface's colors on Windows 11), or on Linux the light/dark setting of GNOME and compatible desktops.
 - **Language**: 9 languages available (French, English, Spanish, German, Italian, Portuguese, Dutch, Polish, Russian), applied without restarting. "Auto" follows the system language (Windows UI language, or the `LANGUAGE` / `LANG` variables on Linux).
 
 ## Quick start
@@ -93,4 +93,4 @@ On first launch, the app downloads for its own operation:
 - [ffmpeg](https://github.com/BtbN/FFmpeg-Builds) (GPL build by BtbN)
 - [Deno](https://github.com/denoland/deno) (MIT license), optional, on demand
 
-The interface uses [pywebview](https://github.com/r0x0r/pywebview) (BSD license), the [Audiowide](https://fonts.google.com/specimen/Audiowide) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) fonts (SIL Open Font License, bundled in `ytdlgui/web/fonts/`) [Lucide](https://lucide.dev) icon paths (ISC license) and [hls.js](https://github.com/video-dev/hls.js) (Apache 2.0 license, bundled in `ytdlgui/web/vendor/`) for the clip editor preview. Its style follows the Open Design Cosmic design system.
+The interface uses [pywebview](https://github.com/r0x0r/pywebview) (BSD license), the [Inter](https://rsms.me/inter/) and [JetBrains Mono](https://www.jetbrains.com/lp/mono/) fonts (SIL Open Font License, bundled in `ytdlgui/web/fonts/`) [Lucide](https://lucide.dev) icon paths (ISC license) and [hls.js](https://github.com/video-dev/hls.js) (Apache 2.0 license, bundled in `ytdlgui/web/vendor/`) for the clip editor preview. Its style follows the Open Design Clay design system.

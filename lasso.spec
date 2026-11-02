@@ -1,8 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Build : pyinstaller ytdl-interface.spec (à lancer sur la plateforme cible : Windows
+# Build : pyinstaller lasso.spec (à lancer sur la plateforme cible : Windows
 # ou Linux, PyInstaller ne fait pas de compilation croisée).
-# Produit un dossier portable (dist/YTDL-Interface/) contenant l'exécutable
-# YTDL-Interface(.exe) : aucun installeur, settings.json et bin/ (yt-dlp, ffmpeg) sont
+# Produit un dossier portable (dist/Lasso/) contenant l'exécutable
+# Lasso(.exe) : aucun installeur, settings.json et bin/ (yt-dlp, ffmpeg) sont
 # créés à côté de l'exécutable, dans ce même dossier, au premier lancement. Le dossier
 # est archivé tel quel pour la release (zip sous Windows, tar.gz sous Linux).
 import sys
@@ -43,7 +43,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name='YTDL-Interface',
+    name='Lasso',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -65,5 +65,5 @@ coll = COLLECT(
     a.datas,
     strip=False,
     upx=False,
-    name='YTDL-Interface',
+    name='Lasso',
 )

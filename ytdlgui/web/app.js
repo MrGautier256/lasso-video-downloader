@@ -77,21 +77,20 @@ function icon(name) {
   return t.content.firstChild;
 }
 
-const LOGO = '<svg class="brand__mark" viewBox="0 0 40 40" aria-hidden="true">'
-  + '<defs><linearGradient id="lg-planet" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c084fc"/><stop offset="1" stop-color="#8B5CF6"/></linearGradient></defs>'
-  + '<ellipse cx="20" cy="20" rx="18" ry="6.5" transform="rotate(-24 20 20)" fill="none" stroke="#c084fc" stroke-opacity=".45" stroke-width="1.6"/>'
-  + '<circle cx="20" cy="20" r="11" fill="url(#lg-planet)"/>'
-  + '<path d="M20 14.5v10m-4-4 4 4 4-4" fill="none" stroke="#111126" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>'
-  + '<path d="M3.6 26.6c4.2 3.4 14.4 1.9 24.3-3.6" fill="none" stroke="#c084fc" stroke-width="1.6" stroke-linecap="round" transform="rotate(-3 20 20)"/>'
-  + '<circle cx="34" cy="10" r="1.6" fill="#f8f7ff"/></svg>';
+// Lasso : une boucle de corde qui a attrapé une vidéo (triangle « lecture »), le nœud
+// coulant en bas à gauche et la corde qui retombe. Couleur : celle du texte (currentColor).
+const LOGO = '<svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">'
+  + '<g fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+  + '<path d="M8.61 16.16A11.4 7 -12 1 0 7.17 13.29"/><circle cx="7.07" cy="14.19" r="1.7"/>'
+  + '<path d="M7.07 15.89C9.67 18.89 4.27 20.89 6.17 23.89S5.67 26.79 3.07 27.49"/>'
+  + '<path d="M16.1 8.3v6.2l5.6-3.1z" fill="currentColor" stroke-width="1.6"/></g></svg>';
 
+// Rien d'attrapé pour l'instant : la boucle en pointillés, vide de tout sauf du triangle.
 const EMPTY_ART = '<svg class="empty__art" viewBox="0 0 132 84" fill="none" aria-hidden="true">'
-  + '<ellipse cx="66" cy="46" rx="60" ry="20" stroke="currentColor" stroke-opacity=".28" stroke-dasharray="2 6" stroke-linecap="round"/>'
-  + '<ellipse cx="66" cy="46" rx="40" ry="12.5" stroke="currentColor" stroke-opacity=".45"/>'
-  + '<circle cx="66" cy="42" r="17" fill="currentColor" fill-opacity=".14" stroke="currentColor" stroke-opacity=".8"/>'
-  + '<path d="M66 34v15m-6-6 6 6 6-6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
-  + '<circle cx="113" cy="40" r="3.2" fill="currentColor"/>'
-  + '<circle cx="20" cy="14" r="1.2" fill="currentColor" fill-opacity=".7"/><circle cx="104" cy="10" r="1" fill="currentColor" fill-opacity=".6"/><circle cx="12" cy="66" r="1" fill="currentColor" fill-opacity=".5"/></svg>';
+  + '<ellipse cx="74" cy="36" rx="46" ry="25" transform="rotate(-10 74 36)" stroke="currentColor" stroke-opacity=".55" stroke-width="2" stroke-dasharray="3 7" stroke-linecap="round"/>'
+  + '<circle cx="31" cy="49" r="4" stroke="currentColor" stroke-width="2" stroke-opacity=".8"/>'
+  + '<path d="M31 53c6 7-6 10-2 17s-3 10-10 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-opacity=".8"/>'
+  + '<path d="M68 25v22l18-11z" fill="currentColor" fill-opacity=".16" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
 
 // ------------------------------------------------------------------ utilitaires DOM
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -2418,6 +2417,7 @@ function plainNotes(md) {
     .replace(/^#+\s*/gm, '')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
     .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/`([^`\n]+)`/g, '$1')
     .replace(/^\s*[*-]\s+/gm, '• ')
     .replace(/ by @\S+ in https:\/\/\S+/g, '')
     .replace(/^\s*Full Changelog\b.*$/gim, '')
