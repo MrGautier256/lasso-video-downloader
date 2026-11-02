@@ -1,4 +1,4 @@
-/* YTDL Interface : thème Cosmic (design system Open Design « Cosmic »).
+/* Lasso : thème Cosmic (design system Open Design « Cosmic »).
    Les sept couleurs --cosmic-* sont les seuls tons de base : tout le reste en dérive
    (mélanges, transparences), y compris le thème clair. */
 
@@ -202,8 +202,7 @@ body::after {
 }
 .brand { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-2) var(--sp-5); }
 .brand__mark { width: 34px; height: 34px; flex: none; filter: drop-shadow(0 0 10px color-mix(in srgb, var(--cosmic-primary) 45%, transparent)); }
-.brand__name { font: 400 22px/1 var(--font-display); letter-spacing: .03em; }
-.brand__name b { display: block; margin-top: 4px; font: 400 10px/1 var(--font-display); letter-spacing: .34em; text-transform: uppercase; color: var(--accent-ink); }
+.brand__name { font: 400 26px/1 var(--font-display); letter-spacing: .04em; }
 .brand__ver { display: block; margin-top: 7px; font: 400 11px/1 var(--font-mono); color: var(--text-3); letter-spacing: .02em; }
 
 .nav { display: flex; flex-direction: column; gap: 2px; }

@@ -1,4 +1,4 @@
-"""Fenêtre principale de YTDL Interface (interface graphique pour yt-dlp).
+"""Fenêtre principale de Lasso (interface graphique pour yt-dlp).
 
 L'interface est une page web (ytdlgui/web/) affichée dans une fenêtre native par
 pywebview (WebView2 sous Windows, WebKitGTK ou Qt WebEngine sous Linux). Toute la
