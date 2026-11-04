@@ -115,6 +115,8 @@ Lasso sends no personal data and contains no analytics or telemetry. It only con
 
 Your browser's cookies are read, on your computer, only if you turn on *Use browser cookies* (*Network & accounts* page), and are only sent to the site of the video being downloaded.
 
+Lasso keeps a log in `lasso.log`, next to the executable (about 4 MB at most, with `lasso.log.1`), to help understand an error afterwards. It stays on your computer: Lasso never sends it anywhere. It lists the addresses and titles of what you download, but neither your password nor your cookies, so read it before sharing it. You can delete it at any time.
+
 ## Notes
 
 - Settings are saved in `settings.json`, next to the executable (the password is never saved).

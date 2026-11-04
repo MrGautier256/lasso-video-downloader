@@ -301,6 +301,10 @@ class _Handler(http.server.BaseHTTPRequestHandler):
         self.send_header("Accept-Ranges", "bytes")
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Cache-Control", "no-store")
+        if self.close_connection:
+            # À dire dans la réponse : sans cela, ffmpeg 8 croit la connexion réutilisable,
+            # vide tout le fichier pour sauter au passage, puis reçoit « End of file ».
+            self.send_header("Connection", "close")
         if length is not None:
             self.send_header("Content-Length", str(length))
         if status == 206:

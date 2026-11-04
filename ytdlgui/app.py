@@ -22,6 +22,7 @@ from . import clips
 from . import command as cmdmod
 from . import engine as eng
 from . import i18n
+from . import journal
 from . import preview
 from . import shortcuts
 from . import system
@@ -207,6 +208,7 @@ class Api:
         self._engine = eng.Engine(self._q)
         self._events = []
         self._log = collections.deque(maxlen=LOG_KEEP)
+        journal.write(["=== Lasso %s ===" % __version__])
         self._busy_binary = False
         self._force_close = False
         self._window = None
@@ -751,13 +753,15 @@ class Api:
 
     # ---------------------------------------------------------- suivi (appelé en boucle par la page)
     def poll(self):
-        log, dirty, finished = [], False, False
+        log, disk, dirty, finished = [], [], False, False
         try:
             while len(log) < 2000:
                 event = self._q.get_nowait()
                 kind = event[0]
-                if kind == "log":
-                    log.append("[%s] %s" % (event[1], event[2]))
+                if kind in ("log", "journal"):
+                    disk.append("[%s] %s" % (event[1], event[2]))
+                    if kind == "log":
+                        log.append(disk[-1])
                 elif kind in ("status", "progress", "title"):
                     dirty = True
                 elif kind == "done":
@@ -766,6 +770,8 @@ class Api:
             pass
         if log:
             self._log.extend(log)
+        if disk:
+            journal.write(disk)
         if finished:
             self._check_queue_done()
         with self._lock:
