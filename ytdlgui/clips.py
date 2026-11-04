@@ -110,11 +110,11 @@ def renewer(ytdlp, cfg, url):
 
 
 # ------------------------------------------------------------------ fusion
-_SECTION_MARK = re.compile(r" \[\d\d-\d\d-\d\d\](?=\.[^.]+$)")
+_SECTION_MARK = re.compile(r" \[\d\d-\d\d-\d\d - \d\d-\d\d-\d\d\](?=\.[^.]+$)")
 
 
 def merged_name(first_part, suffix):
-    """Nom du fichier fusionné : celui du premier passage, sans son début, suivi du
+    """Nom du fichier fusionné : celui du premier passage, sans ses heures, suivi du
     mot « extraits » (traduit). Ne remplace jamais un fichier existant."""
     folder, base = os.path.split(first_part)
     stem, ext = os.path.splitext(_SECTION_MARK.sub("", base))

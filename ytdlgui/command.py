@@ -178,9 +178,9 @@ def format_args(cfg, clip=None):
 def output_template(cfg, clip=None):
     tmpl = cfg.get("output_template", "").strip() or "%(title)s.%(ext)s"
     if clip and "section_" not in tmpl:
-        # Un fichier par passage : sans le début dans le nom, le deuxième passage
-        # porterait le nom du premier et serait sauté.
-        mark = " [%(section_start>%H-%M-%S)s]"
+        # Un fichier par passage, nommé d'après son début et sa fin : deux découpes différentes
+        # ne portent jamais le même nom, et --force-overwrites ne remplace que la même découpe.
+        mark = " [%(section_start>%H-%M-%S)s - %(section_end>%H-%M-%S)s]"
         if tmpl.endswith(".%(ext)s"):
             tmpl = tmpl[:-len(".%(ext)s")] + mark + ".%(ext)s"
         else:
@@ -321,7 +321,10 @@ def clip_args(cfg, clip):
     args = ["--download-sections", format_sections(clip["sections"]),
             # ffmpeg sans bannière ni métadonnées : seules ses statistiques (time=...)
             # restent, et servent à la progression (cf. engine.py).
-            "--downloader-args", "ffmpeg_i:-hide_banner -loglevel warning -stats"] + _SECTION_OVERRIDES
+            "--downloader-args", "ffmpeg_i:-hide_banner -loglevel warning -stats",
+            # Un essai raté laisse un fichier tronqué du même nom : yt-dlp le prendrait pour
+            # déjà téléchargé et le nouvel essai échouerait sans rien télécharger.
+            "--force-overwrites"] + _SECTION_OVERRIDES
     if clip_is_precise(clip):
         args += ["--force-keyframes-at-cuts"]
         if cfg.get("mode", "video") != "audio":
@@ -331,6 +334,11 @@ def clip_args(cfg, clip):
             else:
                 args += ["--merge-output-format", cont if cont in ("mp4", "mkv") else "mp4",
                          "--downloader-args", "ffmpeg_o:" + _PRECISE_H264]
+    elif cfg.get("mode", "video") == "audio":
+        # Copie sans réencodage : ffmpeg repart du bloc qui précède le début du passage.
+        # Sans liste d'édition pour le masquer (WebM), l'extrait commencerait plusieurs
+        # secondes trop tôt : on jette ce qui précède le début.
+        args += ["--downloader-args", "ffmpeg_o:-copypriorss 0"]
     return args
 
 
