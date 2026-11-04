@@ -5,6 +5,8 @@ bin/
 settings.json
 archive.txt
 error.log
+lasso.log
+lasso.log.1
 
 # Python
 __pycache__/

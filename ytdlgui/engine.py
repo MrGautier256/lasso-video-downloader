@@ -6,6 +6,7 @@ import subprocess
 import threading
 
 from .binaries import CREATE_NO_WINDOW, IS_WINDOWS
+from .journal import command_line
 
 # Codes internes ; la traduction pour l'affichage se fait dans app.py (st.*)
 ST_PENDING = "pending"
@@ -77,7 +78,8 @@ class Engine:
 
     Événements postés dans ui_queue (tuples) :
       ("status", job_id), ("progress", job_id), ("title", job_id),
-      ("log", job_id, ligne), ("done", job_id, code_retour)
+      ("log", job_id, ligne), ("journal", job_id, ligne), ("done", job_id, code_retour)
+    ("journal" va seulement dans lasso.log, pas dans la page Journal.)
     """
 
     def __init__(self, ui_queue):
@@ -127,6 +129,7 @@ class Engine:
             threading.Thread(target=self._run, args=(job,), daemon=True).start()
 
     def _run(self, job):
+        self._post("journal", job.id, job.url)
         if job.prepare is not None:
             job.phase = PHASE_PREPARE
             self._post("status", job.id)
@@ -142,6 +145,7 @@ class Engine:
                 return
         job.phase = PHASE_DOWNLOAD
         job.part_index = 0
+        self._post("journal", job.id, command_line(job.cmd))
         try:
             job.proc = subprocess.Popen(
                 job.cmd,
@@ -192,6 +196,7 @@ class Engine:
         else:
             job.status = ST_ERROR
         job.phase = ""
+        self._post("journal", job.id, "code de sortie : %s" % rc)
         if job.cleanup is not None:
             try:
                 job.cleanup(job)

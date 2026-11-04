@@ -115,6 +115,8 @@ Lasso n'envoie aucune donnée personnelle et ne contient ni statistiques ni tél
 
 Les cookies de votre navigateur ne sont lus, sur votre ordinateur, que si vous activez *Utiliser les cookies du navigateur* (page *Réseau et comptes*), et ne sont envoyés qu'au site de la vidéo téléchargée.
 
+Lasso tient un journal dans `lasso.log`, à côté de l'exécutable (4 Mo environ au plus, avec `lasso.log.1`), pour comprendre une erreur après coup. Il reste sur votre ordinateur : Lasso ne l'envoie nulle part. Il contient les adresses et les titres de ce que vous téléchargez, mais ni votre mot de passe ni vos cookies : relisez-le avant de le partager. Vous pouvez le supprimer à tout moment.
+
 ## Notes
 
 - Les réglages sont mémorisés dans `settings.json`, à côté de l'exécutable (le mot de passe n'est jamais enregistré).
